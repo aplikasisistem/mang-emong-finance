@@ -1,24 +1,21 @@
 // Konfigurasi Firebase untuk Mang Emong Ramen Finance
-// Masukkan kredensial Firebase Anda di sini jika ingin menghubungkan ke database online.
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY_HERE",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
+    apiKey: "AIzaSyB7-sRsDabjN9ypOVyJwhdA7jNczWIhoiQ",
+    authDomain: "manajemen-keuangan-mang-emong.firebaseapp.com",
+    databaseURL: "https://manajemen-keuangan-mang-emong-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "manajemen-keuangan-mang-emong",
+    storageBucket: "manajemen-keuangan-mang-emong.firebasestorage.app",
+    messagingSenderId: "719220664193",
+    appId: "1:719220664193:web:7141f6262a38c5851b6a80",
+    measurementId: "G-JTPDTWHRQW"
 };
 
-// Inisialisasi Firebase (jika API key valid)
+// Inisialisasi Firebase & Firestore (Compat Version untuk integrasi mudah)
 let db = null;
 try {
-    if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        console.log("Firebase initialized successfully.");
-    } else {
-        console.log("Running in Local Mock Mode. Update firebase-config.js to sync with Firebase.");
-    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    console.log("Firebase & Firestore berhasil terhubung ke project: manajemen-keuangan-mang-emong!");
 } catch (e) {
-    console.warn("Firebase initialization error:", e);
+    console.error("Gagal menginisialisasi Firebase:", e);
 }
