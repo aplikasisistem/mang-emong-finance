@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Sistem Keuangan - Mang Emong Ramen House</title>
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Top Navbar -->
+    <header class="navbar">
+        <div class="nav-brand">
+            <i class="fa-solid fa-bowl-food"></i>
+            <span>Mang Emong Ramen Finance</span>
+        </div>
+        <div class="nav-right">
+            <div class="sync-status" id="syncStatus">
+                <i class="fa-solid fa-cloud-arrow-up"></i> <span>Synced with Firebase</span>
+            </div>
+            <div class="user-profile">
+                <select id="userRoleSelect" onchange="switchRole()">
+                    <option value="admin">Admin: Mang Emong</option>
+                    <option value="cashier">Kasir: Staf Ramen</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <ul>
+                <li class="active" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
+                <li onclick="switchTab('transaction')"><i class="fa-solid fa-cash-register"></i> Transaksi & Kasir</li>
+                <li onclick="switchTab('inventory')"><i class="fa-solid fa-boxes-stacked"></i> Stok Bahan Baku</li>
+                <li onclick="switchTab('reports')"><i class="fa-solid fa-file-excel"></i> Laporan & Ekspor</li>
+                <li onclick="switchTab('settings')"><i class="fa-solid fa-gear"></i> Pengaturan API</li>
+            </ul>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- DASHBOARD TAB -->
+            <section id="tab-dashboard" class="tab-content active">
+                <h2>Dashboard Keuangan Ramen House</h2>
+                <div class="filter-bar">
+                    <label>Periode: </label>
+                    <select id="periodFilter" onchange="updateDashboard()">
+                        <option value="today">Hari Ini</option>
+                        <option value="week">Minggu Ini</option>
+                        <option value="month" selected>Bulan Ini</option>
+                        <option value="year">Tahun Ini</option>
+                    </select>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card income">
+                        <h3>Total Pemasukan</h3>
+                        <p id="totalIncome">Rp 0</p>
+                    </div>
+                    <div class="card expense">
+                        <h3>Total Pengeluaran (COGS + Operasional)</h3>
+                        <p id="totalExpense">Rp 0</p>
+                    </div>
+                    <div class="card profit">
+                        <h3>Net Profit (Laba Bersih)</h3>
+                        <p id="netProfit">Rp 0</p>
+                    </div>
+                    <div class="card cashdrawer">
+                        <h3>Kas di Laci (Cash Drawer)</h3>
+                        <p id="drawerCash">Rp 0</p>
+                    </div>
+                </div>
+
+                <!-- Closing Shift Widget -->
+                <div class="section-box mt-20">
+                    <h3>Shift Kasir & Petty Cash</h3>
+                    <div class="shift-box">
+                        <div>
+                            <p>Saldo Awal (Opening Cash): <strong id="openingCashDisplay">Rp 500.000</strong></p>
+                            <p>Total Penjualan Tunai: <strong id="shiftCashSales">Rp 0</strong></p>
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" onclick="openShiftModal()">Kelola Shift / Closing</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TRANSACTION & AI VOICE TAB -->
+            <section id="tab-transaction" class="tab-content">
+                <h2>Pencatatan Transaksi & AI Voice Assistant</h2>
+                
+                <!-- AI Voice Input Section -->
+                <div class="ai-voice-box">
+                    <h3><i class="fa-solid fa-microphone-lines"></i> AI Voice Command Simulator</h3>
+                    <p>Contoh: "Catat pengeluaran beli mi 200 ribu untuk bahan baku" atau "Catat pemasukan dine in 450 ribu tunai"</p>
+                    <div class="voice-controls">
+                        <input type="text" id="voiceInputText" placeholder="Ketik atau simulasikan perintah suara...">
+                        <button class="btn btn-voice" onclick="processVoiceCommand()"><i class="fa-solid fa-microphone"></i> Proses AI</button>
+                    </div>
+                </div>
+
+                <!-- Manual Transaction Form -->
+                <div class="section-box mt-20">
+                    <h3>Input Transaksi Manual</h3>
+                    <form id="transactionForm" onsubmit="saveTransaction(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Jenis Transaksi</label>
+                                <select id="txType" onchange="updateCategoryOptions()" required>
+                                    <option value="income">Pemasukan (Income)</option>
+                                    <option value="expense">Pengeluaran (Expense)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Kategori</label>
+                                <select id="txCategory" required>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Jumlah (Rp)</label>
+                                <input type="number" id="txAmount" placeholder="Contoh: 150000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Metode Pembayaran</label>
+                                <select id="txPayment">
+                                    <option value="Cash">Tunai (Cash)</option>
+                                    <option value="QRIS">Non-Tunai (QRIS / EDC)</option>
+                                    <option value="Transfer">Transfer Bank</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Keterangan / Catatan</label>
+                            <input type="text" id="txNote" placeholder="Contoh: Pembelian stok daging sapi 2 kg">
+                        </div>
+                        <button type="submit" class="btn btn-success">Simpan Transaksi</button>
+                    </form>
+                </div>
+
+                <!-- Transaction Table -->
+                <div class="section-box mt-20">
+                    <h3>Riwayat Transaksi Terbaru</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jenis</th>
+                                <th>Kategori</th>
+                                <th>Keterangan</th>
+                                <th>Metode</th>
+                                <th>Jumlah</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody">
+                            <!-- Filled by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- INVENTORY TAB -->
+            <section id="tab-inventory" class="tab-content">
+                <h2>Manajemen Stok Bahan Baku Ramen</h2>
+                <div class="section-box">
+                    <h3>Tambah / Update Stok Bahan</h3>
+                    <form id="inventoryForm" onsubmit="saveInventory(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Nama Bahan Baku</label>
+                                <input type="text" id="invName" placeholder="Contoh: Mi Ramen, Kaldu Ayam, Daging Sapi" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Jumlah Stok</label>
+                                <input type="number" id="invQty" placeholder="Contoh: 10" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Satuan</label>
+                                <input type="text" id="invUnit" placeholder="kg / pack / liter" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Simpan Stok</button>
+                    </form>
+                </div>
+
+                <div class="section-box mt-20">
+                    <h3>Daftar Stok Saat Ini</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nama Bahan</th>
+                                <th>Stok Tersedia</th>
+                                <th>Satuan</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                            <!-- Filled by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- REPORTS TAB -->
+            <section id="tab-reports" class="tab-content">
+                <h2>Laporan Keuangan & Ekspor Data</h2>
+                <div class="section-box">
+                    <h3>Cetak Laporan Ramen House</h3>
+                    <p>Sesuaikan kop surat, logo, dan unduh laporan dalam format Excel atau PDF profesional.</p>
+                    <div class="form-row mt-20">
+                        <button class="btn btn-success" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Download Laporan Excel</button>
+                        <button class="btn btn-danger" onclick="exportToPDF()"><i class="fa-solid fa-file-pdf"></i> Download Laporan PDF</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS TAB -->
+            <section id="tab-settings" class="tab-content">
+                <h2>Konfigurasi Sistem & Firebase</h2>
+                <div class="section-box">
+                    <h3>Firebase Configuration API Key</h3>
+                    <p>Masukkan pengaturan kredensial Firebase Anda di sini agar sinkronisasi Cloud Firestore aktif.</p>
+                    <form onsubmit="saveFirebaseConfig(event)">
+                        <div class="form-group">
+                            <label>API Key</label>
+                            <input type="text" id="fbApiKey" placeholder="AIzaSy...">
+                        </div>
+                        <div class="form-group">
+                            <label>Project ID</label>
+                            <input type="text" id="fbProjectId" placeholder="mang-emong-finance">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Simpan Konfigurasi</button>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- AI Voice Confirmation Modal -->
+    <div id="aiModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fa-solid fa-robot"></i> Konfirmasi Draf AI Voice</h3>
+            <p>AI mendengarkan perintah berikut. Periksa kembali sebelum disimpan ke database:</p>
+            <div id="aiDraftDetails" class="draft-box">
+                <!-- Filled dynamically -->
+            </div>
+            <div class="modal-buttons mt-20">
+                <button class="btn btn-success" onclick="confirmAIDraft()">Setujui & Simpan</button>
+                <button class="btn btn-danger" onclick="closeAIModal()">Batalkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Closing Shift Modal -->
+    <div id="shiftModal" class="modal">
+        <div class="modal-content">
+            <h3>Kelola Shift Kasir (Closing Cash)</h3>
+            <div class="form-group">
+                <label>Saldo Modal Awal (Opening Petty Cash):</label>
+                <input type="number" id="modalOpeningCash" value="500000">
+            </div>
+            <div class="form-group">
+                <label>Total Hitung Fisik Kas di Laci:</label>
+                <input type="number" id="modalPhysicalCash" placeholder="Hitung uang fisik di laci">
+            </div>
+            <div class="modal-buttons mt-20">
+                <button class="btn btn-success" onclick="saveShiftClosing()">Simpan Closing</button>
+                <button class="btn btn-danger" onclick="closeShiftModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- SheetJS & jsPDF for Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- App Scripts -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
