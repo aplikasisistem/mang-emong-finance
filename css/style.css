@@ -1,4 +1,4 @@
-* {
+- {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -26,22 +26,16 @@ body {
 /* Navbar */
 .navbar {
     height: 60px;
-    /* Ubah atau hapus background-color di bawah jika ingin murni pakai foto background */
-    /* background-color: var(--secondary-color); */
-    
-    /* Tambahkan baris kode background gambar di sini */
     background-image: url('../img/bg.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 20px;
     border-bottom: 3px solid var(--primary-color);
-}
 }
 
 .nav-brand {
@@ -83,16 +77,22 @@ body {
 }
 
 .sidebar {
-    width: 250px;
+    width: 260px;
     background-color: white;
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 1000;
 }
 
 .sidebar ul {
     list-style: none;
     padding: 20px 0;
+    margin-top: 60px; /* Jarak agar tidak tertutup navbar di mobile */
 }
 
 .sidebar li {
@@ -117,6 +117,7 @@ body {
     flex: 1;
     padding: 30px;
     overflow-y: auto;
+    margin-left: 260px; /* Memberi ruang untuk sidebar di desktop */
 }
 
 .tab-content {
@@ -288,6 +289,7 @@ h2 {
     border: 1px solid var(--border-color);
     margin-top: 10px;
 }
+
 /* Pengaturan ukuran logo */
 .app-logo {
     width: 35px;
@@ -295,73 +297,76 @@ h2 {
     object-fit: cover;
     border-radius: 50%;
 }
-/* Pengaturan Default untuk Layar Besar (Desktop) */
-.sidebar {
-  width: 260px;
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100%;
-}
 
-.main-content {
-  margin-left: 260px; /* Memberi ruang untuk sidebar */
-}
-
-/* Pengaturan untuk Layar HP (Mobile) */
-@media screen and (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%); /* Sembunyikan sidebar ke kiri */
-    transition: transform 0.3s ease;
-    z-index: 1000;
-  }
-
-  /* Jika sidebar aktif/dibuka */
-  .sidebar.active {
-    transform: translateX(0); 
-  }
-
-  .main-content {
-    margin-left: 0 !important; /* Konten utama memenuhi lebar layar HP */
-    width: 100% !important;
-  }
-}
 /* Tombol Hamburger disembunyikan di Desktop */
 .menu-toggle {
-  display: none;
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #333;
-  cursor: pointer;
-  margin-right: 10px;
+    display: none;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: white;
+    cursor: pointer;
+    margin-right: 10px;
 }
 
 /* Overlay gelap di belakang sidebar saat aktif di HP */
 .sidebar-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
 }
 
-/* Pengaturan khusus Tampilan HP */
+/* Pengaturan khusus Tampilan HP (Mobile Responsiveness) */
 @media screen and (max-width: 768px) {
-  .menu-toggle {
-    display: block; /* Munculkan tombol hamburger di HP */
+  /* Navbar disusun ke bawah agar tidak bertumpuk */
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding: 10px 15px;
+    gap: 8px;
   }
 
+  .nav-brand {
+    width: 100%;
+    font-size: 1rem;
+  }
+
+  .nav-right {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sync-status {
+    font-size: 0.75rem;
+  }
+
+  #userRoleSelect {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+
+  /* Munculkan tombol hamburger di HP */
+  .menu-toggle {
+    display: block;
+  }
+
+  /* Sembunyikan sidebar di awal secara default di HP */
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
-    z-index: 1000;
+    top: 0;
+    height: 100%;
   }
 
-  /* Saat sidebar dibuka via JS (.active) */
+  /* Munculkan sidebar saat diberi kelas .active lewat JavaScript */
   .sidebar.active {
     transform: translateX(0);
   }
@@ -370,6 +375,7 @@ h2 {
     display: block;
   }
 
+  /* Lebar konten utama memenuhi layar penuh di HP */
   .main-content {
     margin-left: 0 !important;
     width: 100% !important;
