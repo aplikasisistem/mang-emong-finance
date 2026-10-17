@@ -1,6 +1,6 @@
 // State Aplikasi & Mock Data Awal
 let currentUserRole = 'admin'; // 'admin' atau 'cashier'
-let openingCash = 500000;
+let openingCash = 0; // Diubah default menjadi 0
 
 let transactions = [];
 let inventory = [];
@@ -21,6 +21,20 @@ function fetchDataFromFirebase() {
         updateDashboard();
         return;
     }
+
+    // Ambil Saldo Awal (Opening Cash) secara Real-time dari Firestore
+    db.collection("settings").doc("shiftConfig").onSnapshot((doc) => {
+        if (doc.exists && doc.data().openingCash !== undefined) {
+            openingCash = Number(doc.data().openingCash) || 0;
+            const elDisplay = document.getElementById('openingCashDisplay');
+            if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
+        } else {
+            openingCash = 0;
+        }
+        updateDashboard();
+    }, (error) => {
+        console.error("Gagal mengambil data saldo awal: ", error);
+    });
 
     // Ambil Transaksi secara Real-time / On Snapshot
     db.collection("transactions").orderBy("date", "desc").onSnapshot((snapshot) => {
@@ -66,6 +80,7 @@ function switchRole() {
 function updateCategoryOptions() {
     const type = document.getElementById('txType').value;
     const catSelect = document.getElementById('txCategory');
+    if (!catSelect) return;
     catSelect.innerHTML = '';
 
     let categories = [];
@@ -302,7 +317,7 @@ function closeAIModal() {
     document.getElementById('aiModal').style.display = 'none';
 }
 
-// Shift Modal
+// Shift Modal (Tersimpan ke Firestore secara Permanen)
 function openShiftModal() {
     document.getElementById('shiftModal').style.display = 'flex';
 }
@@ -310,12 +325,24 @@ function closeShiftModal() {
     document.getElementById('shiftModal').style.display = 'none';
 }
 function saveShiftClosing() {
-    openingCash = parseFloat(document.getElementById('modalOpeningCash').value);
+    const valInput = parseFloat(document.getElementById('modalOpeningCash').value);
+    openingCash = isNaN(valInput) ? 0 : valInput;
+
+    if (db) {
+        db.collection("settings").doc("shiftConfig").set({
+            openingCash: openingCash
+        }).then(() => {
+            console.log("Saldo awal berhasil disimpan secara online!");
+        }).catch(err => {
+            console.error("Gagal menyimpan saldo awal:", err);
+        });
+    }
+
     const elDisplay = document.getElementById('openingCashDisplay');
     if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
     closeShiftModal();
     updateDashboard();
-    alert("Closing shift berhasil disimpan!");
+    alert("Saldo awal kasir berhasil disimpan!");
 }
 
 // Firebase Config Save
