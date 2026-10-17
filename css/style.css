@@ -295,3 +295,34 @@ h2 {
     object-fit: cover;
     border-radius: 50%;
 }
+/* Pengaturan Default untuk Layar Besar (Desktop) */
+.sidebar {
+  width: 260px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+}
+
+.main-content {
+  margin-left: 260px; /* Memberi ruang untuk sidebar */
+}
+
+/* Pengaturan untuk Layar HP (Mobile) */
+@media screen and (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%); /* Sembunyikan sidebar ke kiri */
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  /* Jika sidebar aktif/dibuka */
+  .sidebar.active {
+    transform: translateX(0); 
+  }
+
+  .main-content {
+    margin-left: 0 !important; /* Konten utama memenuhi lebar layar HP */
+    width: 100% !important;
+  }
+}
