@@ -1,16 +1,18 @@
 {
-  "short_name": "RamenFinance",
+  "short_name": "Ramen Finance",
   "name": "Mang Emong Ramen Finance",
   "icons": [
     {
-      "src": "./img/logo.jpg?v=2",
+      "src": "https://mangemong.netlify.app/img/logo.jpg",
       "type": "image/jpeg",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
-      "src": "./img/logo.jpg?v=2",
+      "src": "https://mangemong.netlify.app/img/logo.jpg",
       "type": "image/jpeg",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "./index.html",
