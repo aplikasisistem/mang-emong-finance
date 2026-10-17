@@ -3,12 +3,12 @@
   "name": "Mang Emong Ramen Finance",
   "icons": [
     {
-      "src": "./img/logo.jpg",
+      "src": "./img/logo.jpg?v=2",
       "type": "image/jpeg",
       "sizes": "192x192"
     },
     {
-      "src": "./img/logo.jpg",
+      "src": "./img/logo.jpg?v=2",
       "type": "image/jpeg",
       "sizes": "512x512"
     }
