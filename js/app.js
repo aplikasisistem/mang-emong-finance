@@ -10,7 +10,43 @@ let pendingAIDraft = null;
 window.onload = function() {
     updateCategoryOptions();
     fetchDataFromFirebase();
+    initRupiahInputs();
 };
+
+// Fungsi otomatisasi titik pemisah ribuan untuk semua input angka
+function formatRupiahInput(input) {
+    let value = input.value.replace(/[^,\d]/g, '').toString();
+    let split = value.split(',');
+    let sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    if (ribuan) {
+        let separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+    }
+
+    rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+    input.value = rupiah;
+}
+
+// Pasang event listener ke semua input angka di aplikasi
+function initRupiahInputs() {
+    const numberInputs = document.querySelectorAll('input[type="number"], input#txAmount, input#invQty, input#modalOpeningCash, input#modalPhysicalCash');
+    numberInputs.forEach(input => {
+        input.setAttribute('type', 'text');
+        input.setAttribute('inputmode', 'numeric');
+        input.addEventListener('input', function() {
+            formatRupiahInput(this);
+        });
+    });
+}
+
+// Helper untuk membersihkan titik pemisah sebelum kalkulasi / simpan ke database
+function cleanNumber(value) {
+    if (!value) return 0;
+    return parseFloat(String(value).replace(/\./g, '').replace(/,/g, '.')) || 0;
+}
 
 // Ambil Data dari Firebase Firestore secara Online
 function fetchDataFromFirebase() {
@@ -106,7 +142,7 @@ function saveTransaction(e) {
     e.preventDefault();
     const type = document.getElementById('txType').value;
     const category = document.getElementById('txCategory').value;
-    const amount = parseFloat(document.getElementById('txAmount').value);
+    const amount = cleanNumber(document.getElementById('txAmount').value);
     const payment = document.getElementById('txPayment').value;
     const note = document.getElementById('txNote').value;
 
@@ -213,7 +249,7 @@ function updateDashboard() {
 function saveInventory(e) {
     e.preventDefault();
     const name = document.getElementById('invName').value;
-    const qty = parseInt(document.getElementById('invQty').value);
+    const qty = parseInt(cleanNumber(document.getElementById('invQty').value));
     const unit = document.getElementById('invUnit').value;
     const status = qty > 5 ? 'Aman' : 'Perhatian';
 
@@ -252,7 +288,7 @@ function renderInventory() {
 function restockItem(id, currentQty) {
     let add = prompt("Masukkan jumlah penambahan stok:", "5");
     if (add) {
-        let newQty = currentQty + parseInt(add);
+        let newQty = currentQty + parseInt(cleanNumber(add));
         let newStatus = newQty > 5 ? 'Aman' : 'Perhatian';
 
         if (db) {
@@ -328,7 +364,7 @@ function closeShiftModal() {
     document.getElementById('shiftModal').style.display = 'none';
 }
 function saveShiftClosing() {
-    const valInput = parseFloat(document.getElementById('modalOpeningCash').value);
+    const valInput = cleanNumber(document.getElementById('modalOpeningCash').value);
     openingCash = isNaN(valInput) ? 0 : valInput;
 
     if (db) {
