@@ -26,11 +26,14 @@ function fetchDataFromFirebase() {
     db.collection("settings").doc("shiftConfig").onSnapshot((doc) => {
         if (doc.exists && doc.data().openingCash !== undefined) {
             openingCash = Number(doc.data().openingCash) || 0;
-            const elDisplay = document.getElementById('openingCashDisplay');
-            if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
         } else {
             openingCash = 0;
         }
+
+        // Perbarui semua elemen penampil saldo awal di UI secara dinamis
+        const elDisplay = document.getElementById('openingCashDisplay');
+        if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
+
         updateDashboard();
     }, (error) => {
         console.error("Gagal mengambil data saldo awal: ", error);
