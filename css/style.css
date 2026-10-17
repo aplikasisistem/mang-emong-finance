@@ -382,3 +382,30 @@ h2 {
     padding: 15px;
   }
 }
+/* Perbaikan Tambahan Khusus Tampilan HP */
+@media screen and (max-width: 768px) {
+  /* 1. Ubah baris form menjadi susunan ke bawah (stack) agar tidak melebar */
+  .form-row {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* 2. Buat semua input dan select selebar penuh layar HP */
+  .form-group input, 
+  .form-group select {
+    width: 100% !important;
+  }
+
+  /* 3. Bungkus tabel agar bisa digeser (scroll) ke samping jika terlalu lebar */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* 4. Pastikan kotak section / form tidak melebar keluar layar */
+  .section-box, .cards-grid {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+}
