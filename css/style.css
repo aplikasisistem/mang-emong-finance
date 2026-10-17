@@ -1,4 +1,4 @@
-- {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -14,28 +14,32 @@
     --border-color: #e0e0e0;
 }
 
+/* Background menyeluruh & Layar Utama Terkunci */
 body {
-    background-color: var(--bg-color);
+    background-image: url('../img/bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: var(--text-color);
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden;
+    overflow: hidden; /* Mengunci layar agar tidak bergeser secara keseluruhan */
 }
 
 /* Navbar */
 .navbar {
     height: 60px;
-    background-image: url('../img/bg.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background: rgba(0, 0, 0, 0.4); /* Transparan gelap agar teks terbaca jelas di atas foto */
+    backdrop-filter: blur(5px);
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 20px;
     border-bottom: 3px solid var(--primary-color);
+    z-index: 1001;
 }
 
 .nav-brand {
@@ -44,7 +48,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #ff6b4a;
+    color: #ffffff;
 }
 
 .nav-right {
@@ -55,7 +59,7 @@ body {
 
 .sync-status {
     font-size: 0.85rem;
-    color: #4cd137;
+    color: #2ecc71;
     display: flex;
     align-items: center;
     gap: 5px;
@@ -92,7 +96,7 @@ body {
 .sidebar ul {
     list-style: none;
     padding: 20px 0;
-    margin-top: 60px; /* Jarak agar tidak tertutup navbar di mobile */
+    margin-top: 60px; /* Jarak agar tidak tertutup navbar */
 }
 
 .sidebar li {
@@ -112,12 +116,13 @@ body {
     border-left: 4px solid var(--primary-color);
 }
 
-/* Main Content */
+/* Main Content - Hanya bagian ini yang bisa di-scroll ke bawah */
 .main-content {
     flex: 1;
-    padding: 30px;
+    padding: 25px;
     overflow-y: auto;
-    margin-left: 260px; /* Memberi ruang untuk sidebar di desktop */
+    background-color: rgba(248, 249, 250, 0.93); /* Putih transparan agar rapi & teks terbaca */
+    margin-left: 260px; /* Jarak untuk desktop */
 }
 
 .tab-content {
@@ -290,7 +295,7 @@ h2 {
     margin-top: 10px;
 }
 
-/* Pengaturan ukuran logo */
+/* Logo */
 .app-logo {
     width: 35px;
     height: 35px;
@@ -298,7 +303,7 @@ h2 {
     border-radius: 50%;
 }
 
-/* Tombol Hamburger disembunyikan di Desktop */
+/* Tombol Hamburger */
 .menu-toggle {
     display: none;
     background: none;
@@ -309,7 +314,7 @@ h2 {
     margin-right: 10px;
 }
 
-/* Overlay gelap di belakang sidebar saat aktif di HP */
+/* Overlay Gelap Mobile */
 .sidebar-overlay {
     display: none;
     position: fixed;
@@ -321,9 +326,9 @@ h2 {
     z-index: 999;
 }
 
-/* Pengaturan khusus Tampilan HP (Mobile Responsiveness) */
+/* PENGATURAN KHUSUS TAMPILAN HP (MOBILE RESPONSIVE) */
 @media screen and (max-width: 768px) {
-  /* Navbar disusun ke bawah agar tidak bertumpuk */
+  /* Navbar disusun ke bawah secara rapi */
   .navbar {
     flex-direction: column;
     align-items: flex-start;
@@ -353,12 +358,12 @@ h2 {
     padding: 3px 6px;
   }
 
-  /* Munculkan tombol hamburger di HP */
+  /* Munculkan tombol hamburger */
   .menu-toggle {
     display: block;
   }
 
-  /* Sembunyikan sidebar di awal secara default di HP */
+  /* Sembunyikan sidebar di awal */
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
@@ -366,7 +371,6 @@ h2 {
     height: 100%;
   }
 
-  /* Munculkan sidebar saat diberi kelas .active lewat JavaScript */
   .sidebar.active {
     transform: translateX(0);
   }
@@ -375,35 +379,35 @@ h2 {
     display: block;
   }
 
-  /* Lebar konten utama memenuhi layar penuh di HP */
+  /* Konten utama memenuhi layar dan hanya bagian ini yang di-scroll */
   .main-content {
     margin-left: 0 !important;
     width: 100% !important;
     padding: 15px;
   }
-}
-/* Perbaikan Tambahan Khusus Tampilan HP */
-@media screen and (max-width: 768px) {
-  /* 1. Ubah baris form menjadi susunan ke bawah (stack) agar tidak melebar */
+
+  /* Form menyusun ke bawah agar tidak keluar layar HP */
   .form-row {
     flex-direction: column !important;
     gap: 10px !important;
   }
 
-  /* 2. Buat semua input dan select selebar penuh layar HP */
   .form-group input, 
   .form-group select {
     width: 100% !important;
   }
 
-  /* 3. Bungkus tabel agar bisa digeser (scroll) ke samping jika terlalu lebar */
+  .voice-controls {
+    flex-direction: column;
+  }
+
+  /* Tabel dapat di-scroll horizontal jika terlalu lebar */
   .data-table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
   }
 
-  /* 4. Pastikan kotak section / form tidak melebar keluar layar */
   .section-box, .cards-grid {
     width: 100% !important;
     box-sizing: border-box;
