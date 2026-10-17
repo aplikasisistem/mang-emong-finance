@@ -116,12 +116,12 @@ body {
     border-left: 4px solid var(--primary-color);
 }
 
-/* Main Content - Hanya bagian ini yang bisa di-scroll ke bawah */
+/* Main Content - Dibuat transparan agar background foto terlihat dan hanya bagian ini yang bisa di-scroll */
 .main-content {
     flex: 1;
     padding: 25px;
     overflow-y: auto;
-    background-color: rgba(248, 249, 250, 0.93); /* Putih transparan agar rapi & teks terbaca */
+    background-color: transparent !important; 
     margin-left: 260px; /* Jarak untuk desktop */
 }
 
@@ -135,7 +135,8 @@ body {
 
 h2 {
     margin-bottom: 20px;
-    color: var(--secondary-color);
+    color: #ffffff; /* Judul dibuat putih agar kontras dengan background foto */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 /* Dashboard Cards */
@@ -147,10 +148,10 @@ h2 {
 }
 
 .card {
-    background: white;
+    background: rgba(255, 255, 255, 0.95); /* Kartu sedikit transparan agar menyatu dengan background */
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     border-top: 4px solid var(--primary-color);
 }
 
@@ -173,10 +174,10 @@ h2 {
 
 /* Sections & Forms */
 .section-box {
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .mt-20 { margin-top: 20px; }
@@ -225,7 +226,7 @@ h2 {
 
 /* AI Voice Box */
 .ai-voice-box {
-    background: #fdf2f8;
+    background: rgba(253, 242, 248, 0.95);
     border: 1px dashed #d946ef;
     padding: 20px;
     border-radius: 8px;
