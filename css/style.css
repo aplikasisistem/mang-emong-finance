@@ -414,3 +414,19 @@ h2 {
     box-sizing: border-box;
   }
 }
+/* Perbaikan Posisi Filter Periode di HP */
+.filter-bar {
+    margin-top: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@media screen and (max-width: 768px) {
+  .filter-bar {
+    position: relative;
+    z-index: 10;
+    margin-top: 10px;
+  }
+}
