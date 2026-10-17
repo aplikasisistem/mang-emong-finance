@@ -308,3 +308,13 @@ function exportToPDF() {
     
     doc.save("Laporan_Keuangan_Mang_Emong.pdf");
 }
+// Fungsi untuk membuka/menutup sidebar di HP
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    sidebar.classList.toggle('active');
+    if (overlay) {
+        overlay.classList.toggle('active');
+    }
+}
