@@ -3,13 +3,13 @@
   "name": "Mang Emong Ramen Finance",
   "icons": [
     {
-      "src": "https://mangemong.netlify.app/img/logo.jpg",
+      "src": "https://mangemong.netlify.app/img/logo.jpg?v=3",
       "type": "image/jpeg",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "https://mangemong.netlify.app/img/logo.jpg",
+      "src": "https://mangemong.netlify.app/img/logo.jpg?v=3",
       "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "any maskable"
