@@ -1,6 +1,6 @@
 // State Aplikasi & Mock Data Awal
 let currentUserRole = 'admin'; // 'admin' atau 'cashier'
-let openingCash = 0; // Diubah default menjadi 0
+let openingCash = 0;
 
 let transactions = [];
 let inventory = [];
@@ -22,7 +22,7 @@ function fetchDataFromFirebase() {
         return;
     }
 
-    // Ambil Saldo Awal (Opening Cash) secara Real-time dari Firestore
+    // 1. Ambil Saldo Awal (Opening Cash) dari Firestore secara Real-time
     db.collection("settings").doc("shiftConfig").onSnapshot((doc) => {
         if (doc.exists && doc.data().openingCash !== undefined) {
             openingCash = Number(doc.data().openingCash) || 0;
@@ -36,7 +36,7 @@ function fetchDataFromFirebase() {
         console.error("Gagal mengambil data saldo awal: ", error);
     });
 
-    // Ambil Transaksi secara Real-time / On Snapshot
+    // 2. Ambil Transaksi secara Real-time / On Snapshot
     db.collection("transactions").orderBy("date", "desc").onSnapshot((snapshot) => {
         transactions = [];
         snapshot.forEach((doc) => {
@@ -48,7 +48,7 @@ function fetchDataFromFirebase() {
         console.error("Gagal mengambil data transaksi: ", error);
     });
 
-    // Ambil Data Stok / Inventory
+    // 3. Ambil Data Stok / Inventory
     db.collection("inventory").onSnapshot((snapshot) => {
         inventory = [];
         snapshot.forEach((doc) => {
