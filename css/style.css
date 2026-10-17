@@ -326,3 +326,53 @@ h2 {
     width: 100% !important;
   }
 }
+/* Tombol Hamburger disembunyikan di Desktop */
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #333;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+/* Overlay gelap di belakang sidebar saat aktif di HP */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Pengaturan khusus Tampilan HP */
+@media screen and (max-width: 768px) {
+  .menu-toggle {
+    display: block; /* Munculkan tombol hamburger di HP */
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  /* Saat sidebar dibuka via JS (.active) */
+  .sidebar.active {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay.active {
+    display: block;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 15px;
+  }
+}
