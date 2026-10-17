@@ -11,27 +11,28 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Top Navbar -->
+   <!-- Top Navbar -->
 <header class="navbar">
     <div class="nav-brand">
-       <img src="./img/logo.jpg" alt="Logo" class="app-logo">
+        <!-- Tombol Hamburger untuk Mobile -->
+        <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <img src="./img/logo.jpg" alt="Logo" class="app-logo">
         <span>Mang Emong Ramen Finance</span>
     </div>
-</header>
-        <div class="nav-right">
-            <div class="sync-status" id="syncStatus">
-                <i class="fa-solid fa-cloud-arrow-up"></i> <span>Synced with Firebase</span>
-            </div>
-            <div class="user-profile">
-                <select id="userRoleSelect" onchange="switchRole()">
-                    <option value="admin">Admin: Mang Emong</option>
-                    <option value="cashier">Kasir: Staf Ramen</option>
-                </select>
-            </div>
+    <div class="nav-right">
+        <div class="sync-status" id="syncStatus">
+            <i class="fa-solid fa-cloud-arrow-up"></i> <span>Synced with Firebase</span>
         </div>
-    </header>
-
-    <div class="container">
+        <div class="user-profile">
+            <select id="userRoleSelect" onchange="switchRole()">
+                <option value="admin">Admin: Mang Emong</option>
+                <option value="cashier">Kasir: Staf Ramen</option>
+            </select>
+        </div>
+    </div>
+</header>
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <ul>
@@ -293,5 +294,11 @@
     <!-- App Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/app.js"></script>
+    <!-- Sidebar Overlay untuk Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Firebase SDK Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    ...
 </body>
 </html>
