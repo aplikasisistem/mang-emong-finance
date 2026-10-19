@@ -53,22 +53,18 @@ function cleanNumber(value) {
 function applyRolePermissions() {
     const isCashier = currentUserRole === 'cashier' || currentUserRole === 'kasir';
 
-    // 1. Sembunyikan Card Produk Terjual (Expense) dari Kasir jika diperlukan, atau sesuaikan
     const cardExpense = document.getElementById('cardExpense');
     if (cardExpense) cardExpense.style.display = isCashier ? 'none' : 'block';
 
-    // 2. Sembunyikan Tampilan Saldo Modal Awal dari Kasir
     const openingCashWrapper = document.getElementById('openingCashWrapper');
     const modalOpeningGroup = document.getElementById('modalOpeningCashGroup');
     if (openingCashWrapper) openingCashWrapper.style.display = isCashier ? 'none' : 'block';
     if (modalOpeningGroup) modalOpeningGroup.style.display = isCashier ? 'none' : 'block';
 
-    // 3. Sembunyikan Menu Sidebar Khusus Admin dari Kasir
     document.querySelectorAll('.admin-only').forEach(el => {
         el.style.display = isCashier ? 'none' : 'block';
     });
 
-    // 4. Batasi Opsi Kategori pada Form Transaksi Kasir
     const txTypeSelect = document.getElementById('txType');
     if (txTypeSelect) {
         if (isCashier) {
@@ -114,7 +110,6 @@ function fetchDataFromFirebase() {
         return;
     }
 
-    // 1. Ambil Saldo Awal (Opening Cash) dari Firestore secara Real-time
     db.collection("settings").doc("shiftConfig").onSnapshot((doc) => {
         if (doc.exists && doc.data().openingCash !== undefined) {
             openingCash = Number(doc.data().openingCash) || 0;
@@ -133,7 +128,6 @@ function fetchDataFromFirebase() {
         console.error("Gagal mengambil data saldo awal: ", error);
     });
 
-    // 2. Ambil Transaksi secara Real-time / On Snapshot
     db.collection("transactions").orderBy("date", "desc").onSnapshot((snapshot) => {
         transactions = [];
         snapshot.forEach((doc) => {
@@ -146,7 +140,6 @@ function fetchDataFromFirebase() {
         console.error("Gagal mengambil data transaksi: ", error);
     });
 
-    // 3. Ambil Data Stok / Inventory tambahan
     db.collection("inventory").onSnapshot((snapshot) => {
         inventory = [];
         snapshot.forEach((doc) => {
@@ -158,7 +151,7 @@ function fetchDataFromFirebase() {
     });
 }
 
-// Update Kategori Berdasarkan Jenis Transaksi Restoran
+// Update Kategori Berdasarkan Jenis Transaksi Restoran (Hanya Mie & Air untuk Pemasukan)
 function updateCategoryOptions() {
     const typeSelect = document.getElementById('txType');
     const catSelect = document.getElementById('txCategory');
@@ -169,9 +162,9 @@ function updateCategoryOptions() {
 
     let categories = [];
     if (type === 'income') {
-        categories = ['Penjualan Dine-in', 'Penjualan Takeaway', 'Online Order (Gofood)', 'Online Order (Grabfood)', 'Online Order (ShopeeFood)'];
+        categories = ['Mie', 'Air'];
     } else {
-        categories = ['Produk Terjual (Mie / Air Minum / Lainnya)', 'Bahan Baku / COGS', 'Operasional & Lainnya'];
+        categories = ['Bahan Baku / COGS', 'Operasional & Lainnya'];
     }
 
     categories.forEach(cat => {
@@ -256,7 +249,7 @@ function deleteTransaction(id) {
     }
 }
 
-// Dashboard & Kalkulasi Keuangan Versi Terbaru Mang Emong Ramen House
+// Dashboard & Kalkulasi Keuangan
 function updateDashboard() {
     let totalInc = 0;
     let totalProductsCount = 0;
@@ -267,13 +260,12 @@ function updateDashboard() {
         let amt = Number(tx.amount) || 0;
         if (tx.type === 'income') {
             totalInc += amt;
+            totalProductsCount += amt; // Menghitung total nilai pemasukan produk terjual (Mie/Air)
             if (tx.payment === 'Cash') {
                 cashSales += amt;
             } else {
                 bankSales += amt;
             }
-        } else if (tx.type === 'expense' && tx.category.includes('Produk Terjual')) {
-            totalProductsCount += amt; // Menghitung total produk laku (misal mie, air minum)
         }
     });
 
@@ -289,7 +281,7 @@ function updateDashboard() {
     const elShiftTotal = document.getElementById('shiftTotalSales');
 
     if (elInc) elInc.textContent = 'Rp ' + totalInc.toLocaleString('id-ID');
-    if (elProductsSold) elProductsSold.textContent = totalProductsCount + ' Produk';
+    if (elProductsSold) elProductsSold.textContent = 'Rp ' + totalProductsCount.toLocaleString('id-ID');
     if (elDrawer) elDrawer.textContent = 'Rp ' + currentDrawer.toLocaleString('id-ID');
     
     if (elShiftCash) elShiftCash.textContent = 'Rp ' + cashSales.toLocaleString('id-ID');
@@ -323,7 +315,6 @@ function saveShiftClosing() {
         }
     });
 
-    // Update Modal Awal hanya jika Role adalah Admin
     if (currentUserRole === 'admin') {
         const valInput = cleanNumber(document.getElementById('modalOpeningCash').value);
         openingCash = isNaN(valInput) ? 0 : valInput;
@@ -479,7 +470,7 @@ function processVoiceCommand() {
 
     pendingAIDraft = {
         type: type,
-        category: type === 'income' ? 'Penjualan Dine-in' : 'Produk Terjual (Mie / Air Minum / Lainnya)',
+        category: type === 'income' ? 'Mie' : 'Bahan Baku / COGS',
         amount: amount,
         payment: 'Cash',
         note: text
