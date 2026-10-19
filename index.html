@@ -1,65 +1,272 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MANG EMOS FINANCE - Login</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4f46e5">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
-    }
-  </script>
-  <!-- Firebase SDK Compat -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MANG EMOS FINANCE</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- XLSX & jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- CSS di dalam folder css/ -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-slate-900 font-sans text-slate-100 min-h-screen flex items-center justify-center p-4">
-  <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
-    <div class="text-center mb-8">
-      <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
-        <span class="text-3xl font-extrabold text-white">🍜</span>
-      </div>
-      <h1 class="text-2xl font-bold tracking-tight text-white">MANG EMOS FINANCE</h1>
-      <p class="text-slate-400 text-sm mt-1">Sistem Manajemen Keuangan Resto & Kasir</p>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
+
+    <!-- Modal Login -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 text-white rounded-xl p-6 w-full max-w-md shadow-2xl border border-slate-700">
+            <div class="text-center mb-6">
+                <div class="bg-indigo-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+                    <i class="fa-solid fa-bowl-food text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold tracking-wide text-white">MANG EMOS FINANCE</h2>
+                <p class="text-xs text-slate-400 mt-1">Sistem Manajemen Keuangan Resto & Kasir</p>
+            </div>
+            
+            <form onsubmit="event.preventDefault(); loginUser();" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Email / Owner UID</label>
+                    <input type="text" id="userUidInput" placeholder="Masukkan Email atau UID" required class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Mode Akses Masuk</label>
+                    <select id="loginRoleSelect" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="admin">Admin / Pemilik (Full Akses)</option>
+                        <option value="kasir">Kasir (Akses Terbatas)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-200 shadow-lg text-sm mt-2">
+                    Masuk ke Sistem
+                </button>
+            </form>
+        </div>
     </div>
 
-    <form id="loginForm" class="space-y-5">
-      <div>
-        <label class="block text-sm font-semibold mb-2 text-slate-300">Email / Owner UID</label>
-        <input type="text" id="loginInput" required placeholder="Masukkan Email atau UID Owner" 
-          class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-      </div>
-      
-      <div>
-        <label class="block text-sm font-semibold mb-2 text-slate-300">Password</label>
-        <input type="password" id="passwordInput" placeholder="Password (Kosongkan jika pakai UID Owner)" 
-          class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-      </div>
+    <!-- Main App Layout -->
+    <div id="appContainer" class="hidden min-h-screen flex flex-col">
+        <!-- Header Utama -->
+        <header class="bg-red-700 text-white shadow-md p-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-utensils text-2xl text-yellow-400"></i>
+                <h1 class="text-xl font-bold tracking-wide">MANG EMOS FINANCE</h1>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <span id="userInfo" class="bg-red-800 px-3 py-1 rounded text-sm font-semibold">Role: -</span>
+                <button id="switchRoleBtn" onclick="toggleRole()" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold text-sm px-3 py-1.5 rounded transition">
+                    Switch Mode
+                </button>
+                <button onclick="logout()" class="bg-gray-800 hover:bg-gray-900 text-xs px-2.5 py-1.5 rounded text-white">Logout</button>
+            </div>
+        </header>
 
-      <div>
-        <label class="block text-sm font-semibold mb-2 text-slate-300">Mode Akses Masuk</label>
-        <select id="roleSelect" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-          <option value="admin">Admin / Pemilik (Full Akses)</option>
-          <option value="kasir">Kasir (Akses Terbatas)</option>
-        </select>
-      </div>
+        <!-- Bar Tool Admin: AI Voice & External Database Links -->
+        <div id="adminToolBar" class="bg-red-900 text-white px-4 py-2 flex flex-wrap justify-between items-center gap-2 text-sm">
+            <div class="flex items-center gap-3">
+                <button id="voiceBtn" onclick="startVoiceInput()" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-3 py-1 rounded-full font-bold flex items-center gap-2 animate-pulse">
+                    <i class="fa-solid fa-microphone"></i> AI Suara Catat Pengeluaran
+                </button>
+                <span id="voiceStatus" class="italic text-gray-300 text-xs"></span>
+            </div>
+            <div class="flex gap-2">
+                <a href="https://console.firebase.google.com/u/0/project/manajemen-keuangan-mang-emong/database" target="_blank" class="bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-database"></i> Firebase DB
+                </a>
+                <button onclick="openGoogleSheetsPrompt()" class="bg-green-600 hover:bg-green-700 px-2.5 py-1 rounded text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-file-excel"></i> Google Sheets
+                </button>
+            </div>
+        </div>
 
-      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition duration-200">
-        Masuk ke Sistem
-      </button>
-    </form>
+        <!-- Content Area -->
+        <main class="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <div id="loginAlert" class="mt-4 p-3 rounded-xl text-sm font-medium hidden"></div>
-  </div>
+            <!-- Sidebar Form Input -->
+            <div class="md:col-span-1 space-y-6">
+                
+                <!-- Input Pemasukan -->
+                <div class="bg-white p-5 rounded-lg shadow-md border-t-4 border-green-500">
+                    <h2 class="text-lg font-bold mb-3 flex items-center gap-2 text-green-700">
+                        <i class="fa-solid fa-cash-register"></i> Input Pemasukan Kasir
+                    </h2>
+                    <form id="incomeForm" onsubmit="handleIncomeSubmit(event)">
+                        <div class="mb-3">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Metode Pembayaran</label>
+                            <select id="incPaymentMethod" class="w-full border p-2 rounded text-sm focus:ring-green-500 focus:outline-none">
+                                <option value="Tunai (Cash)">Tunai (Cash)</option>
+                                <option value="Non-Tunai (QRIS)">Non-Tunai (QRIS)</option>
+                                <option value="Non-Tunai (Transfer)">Non-Tunai (Transfer)</option>
+                                <option value="Non-Tunai (Debit)">Non-Tunai (Debit)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Nominal Uang Masuk (Rp)</label>
+                            <input type="number" id="incAmount" required min="0" placeholder="100000" class="w-full border p-2 rounded text-sm focus:ring-green-500 focus:outline-none">
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Detail Produk Terjual</label>
+                            <textarea id="incNote" required placeholder="Contoh: Mie 100 mangkok, Air 50 botol" class="w-full border p-2 rounded text-sm h-20 focus:ring-green-500 focus:outline-none"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded text-sm shadow">Simpan Pemasukan</button>
+                    </form>
+                </div>
 
-  <script src="app.js"></script>
+                <!-- Closing Shift & Cash Variance -->
+                <div class="bg-white p-5 rounded-lg shadow-md border-t-4 border-yellow-500">
+                    <h2 class="text-lg font-bold mb-3 flex items-center gap-2 text-yellow-700">
+                        <i class="fa-solid fa-vault"></i> Closing Shift (Audit Laci)
+                    </h2>
+                    <div class="bg-gray-50 p-3 rounded mb-3 text-sm">
+                        <p class="text-gray-600">Sistem Kas Tunai Laci Saat Ini:</p>
+                        <p id="systemCashDisplay" class="text-xl font-bold text-gray-800">Rp 0</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Total Fisik Uang Tunai di Laci</label>
+                        <input type="number" id="physicalCashInput" oninput="calculateCashVariance()" placeholder="Masukkan hasil hitung fisik" class="w-full border p-2 rounded text-sm focus:ring-yellow-500 focus:outline-none">
+                    </div>
+                    <div id="varianceResultBox" class="p-3 rounded mb-3 text-sm font-semibold hidden">
+                        <span>Status Audit: </span><span id="varianceStatusText">-</span>
+                        <p id="varianceAmountText" class="text-xs font-normal mt-1"></p>
+                    </div>
+                    <button onclick="processClosingShift()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 rounded text-sm shadow">Proses Closing & Reset Kas</button>
+                </div>
+
+                <!-- Input Pengeluaran (Admin Only) -->
+                <div id="expenseAdminSection" class="bg-white p-5 rounded-lg shadow-md border-t-4 border-red-500 hidden">
+                    <h2 class="text-lg font-bold mb-3 flex items-center gap-2 text-red-700">
+                        <i class="fa-solid fa-hand-holding-dollar"></i> Input Pengeluaran (Admin)
+                    </h2>
+                    <form id="expenseForm" onsubmit="handleExpenseSubmit(event)">
+                        <div class="mb-3">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Kategori Pengeluaran</label>
+                            <select id="expCategory" class="w-full border p-2 rounded text-sm focus:ring-red-500 focus:outline-none">
+                                <option value="Harian - Modal Pengembalian">Harian - Modal Laci / Pengembalian</option>
+                                <option value="Harian - Bahan Baku">Harian - Beli Bahan Baku</option>
+                                <option value="Periodik - Bahan Baku">Mingguan/Bulanan - Bahan Baku Periodik</option>
+                                <option value="Operasional - Gaji">Gaji Karyawan</option>
+                                <option value="Operasional - Sewa & Listrik">Sewa Toko, Listrik & Air</option>
+                                <option value="Operasional - Marketing">Promo & Marketing</option>
+                                <option value="Operasional - Peralatan">Peralatan & Maintenance</option>
+                                <option value="Operasional - Lain-lain">Lain-lain</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Nominal (Rp)</label>
+                            <input type="number" id="expAmount" required min="0" placeholder="50000" class="w-full border p-2 rounded text-sm focus:ring-red-500 focus:outline-none">
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Keterangan / Catatan</label>
+                            <input type="text" id="expNote" required placeholder="Contoh: Beli telur 5 kg" class="w-full border p-2 rounded text-sm focus:ring-red-500 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded text-sm shadow">Simpan Pengeluaran</button>
+                    </form>
+                </div>
+
+                <!-- Tambah Akun Kasir (Admin Only) -->
+                <div id="addUserAdminSection" class="bg-white p-5 rounded-lg shadow-md border-t-4 border-blue-500 hidden">
+                    <h2 class="text-lg font-bold mb-3 flex items-center gap-2 text-blue-700">
+                        <i class="fa-solid fa-user-plus"></i> Tambah Akun Kasir
+                    </h2>
+                    <form onsubmit="handleAddUser(event)">
+                        <div class="mb-2">
+                            <input type="text" id="newUserId" placeholder="UID Kasir (misal: kasir1)" required class="w-full border p-2 rounded text-sm mb-2">
+                            <input type="text" id="newUserName" placeholder="Nama Kasir" required class="w-full border p-2 rounded text-sm mb-2">
+                            <input type="email" id="newUserEmail" placeholder="Email Kasir" required class="w-full border p-2 rounded text-sm mb-2">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded text-sm">Simpan Akun</button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- Panel Statistik & Tabel Transaksi -->
+            <div class="md:col-span-2 space-y-6">
+
+                <!-- Ringkasan Statistik -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+                        <p class="text-xs text-gray-500 uppercase font-semibold">Kas Laci (Tunai)</p>
+                        <p id="cardCashIncome" class="text-lg font-bold text-green-600 mt-1">Rp 0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+                        <p class="text-xs text-gray-500 uppercase font-semibold">Non-Tunai</p>
+                        <p id="cardNonCashIncome" class="text-lg font-bold text-blue-600 mt-1">Rp 0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                        <p class="text-xs text-gray-500 uppercase font-semibold">Pengeluaran</p>
+                        <p id="cardExpense" class="text-lg font-bold text-red-600 mt-1">Rp 0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+                        <p class="text-xs text-gray-500 uppercase font-semibold">Laba Bersih</p>
+                        <p id="cardNetProfit" class="text-lg font-bold text-yellow-600 mt-1">Rp 0</p>
+                    </div>
+                </div>
+
+                <!-- Filter Periode & Export -->
+                <div class="bg-white p-4 rounded-lg shadow flex flex-wrap justify-between items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-bold text-gray-600">Filter:</label>
+                        <select id="filterPeriod" onchange="renderDashboard()" class="border p-1.5 rounded text-sm focus:outline-none">
+                            <option value="all">Semua Data</option>
+                            <option value="daily">Hari Ini</option>
+                            <option value="weekly">Minggu Ini</option>
+                            <option value="monthly">Bulan Ini</option>
+                            <option value="yearly">Tahun Ini</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-sm font-semibold flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-file-excel"></i> Export Excel
+                        </button>
+                        <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded text-sm font-semibold flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-file-pdf"></i> Export PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabel Riwayat Transaksi -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h3 class="font-bold text-gray-700">Riwayat Transaksi & Log Audit</h3>
+                        <span id="dataCount" class="text-xs text-gray-500">0 Data Terrekam</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-600">
+                            <thead class="bg-gray-100 text-xs uppercase text-gray-700 border-b">
+                                <tr>
+                                    <th class="p-3">Waktu</th>
+                                    <th class="p-3">Tipe / Metode</th>
+                                    <th class="p-3">Kategori / Produk</th>
+                                    <th class="p-3">Nominal</th>
+                                    <th class="p-3">User</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionTableBody" class="divide-y">
+                                <!-- Data diisi dari app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript di dalam folder js/ -->
+    <script src="js/app.js"></script>
 </body>
 </html>
