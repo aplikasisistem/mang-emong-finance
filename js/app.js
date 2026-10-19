@@ -571,3 +571,53 @@ function toggleSidebar() {
     if (sidebar) sidebar.classList.toggle('active');
     if (overlay) overlay.classList.toggle('active');
 }
+// Fungsi Admin menetapkan Uang Modal Laci Hari Ini
+function setDailyOpeningCash(e) {
+    e.preventDefault();
+    const amount = cleanNumber(document.getElementById('inputDailyOpeningCash').value);
+
+    if (typeof db !== 'undefined' && db) {
+        db.collection("settings").doc("shiftConfig").set({
+            openingCash: amount,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: 'Admin Mang Emong'
+        }).then(() => {
+            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!\nData langsung terupdate di dashboard kasir.");
+            document.getElementById('inputDailyOpeningCash').value = '';
+        }).catch((err) => {
+            console.error("Gagal menyimpan modal laci:", err);
+            alert("Gagal menyimpan ke database.");
+        });
+    } else {
+        alert("Database Firestore belum terhubung!");
+    }
+}
+
+// Update penampil modal di dashboard admin secara realtime
+function fetchDataFromFirebase() {
+    if (typeof db === 'undefined' || !db) return;
+
+    // Mendengarkan perubahan modal laci secara realtime
+    db.collection("settings").doc("shiftConfig").onSnapshot((doc) => {
+        if (doc.exists && doc.data().openingCash !== undefined) {
+            openingCash = Number(doc.data().openingCash) || 0;
+        } else {
+            openingCash = 0;
+        }
+
+        const elAdminDisplay = document.getElementById('adminOpeningCashDisplay');
+        if (elAdminDisplay) elAdminDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
+
+        updateDashboard();
+    });
+
+    // Ambil data transaksi secara realtime
+    db.collection("transactions").orderBy("date", "desc").onSnapshot((snapshot) => {
+        transactions = [];
+        snapshot.forEach((doc) => {
+            transactions.push({ id: doc.id, ...doc.data() });
+        });
+        renderTransactions();
+        updateDashboard();
+    });
+}
