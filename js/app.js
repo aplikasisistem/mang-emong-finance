@@ -3,7 +3,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail:', err));
 }
 
-// 1. Firebase Configuration
+// 1. Firebase Configuration (Digabung langsung agar tidak error path)
 const firebaseConfig = {
   apiKey: "AIzaSyB7-sRsDabjN9ypOVyJwhdA7jNczWIhoiQ",
   authDomain: "manajemen-keuangan-mang-emong.firebaseapp.com",
@@ -24,9 +24,9 @@ try {
     firebase.initializeApp(firebaseConfig);
   }
   db = firebase.firestore();
-  console.log("Firebase & Firestore terhubung!");
+  console.log("Firebase & Firestore berhasil terhubung!");
 } catch (e) {
-  console.error("Gagal Inisialisasi Firebase:", e);
+  console.error("Gagal menginisialisasi Firebase:", e);
 }
 
 // State Data LocalStorage Fallback
@@ -277,7 +277,6 @@ if (addKasirForm) {
     const password = document.getElementById('kasirPassword').value;
 
     try {
-      // Menyimpan akun ke Firebase Authentication & Realtime Database
       const userCred = await firebase.auth().createUserWithEmailAndPassword(email, password);
       await firebase.database().ref('users/' + userCred.user.uid).set({
         email: email,
