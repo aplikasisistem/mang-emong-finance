@@ -621,3 +621,25 @@ function fetchDataFromFirebase() {
         updateDashboard();
     });
 }
+// Fungsi Admin menetapkan Uang Modal Laci Hari Ini
+function setDailyOpeningCash(e) {
+    e.preventDefault();
+    const inputEl = document.getElementById('inputDailyOpeningCash');
+    const amount = cleanNumber(inputEl ? inputEl.value : 0);
+
+    if (typeof db !== 'undefined' && db) {
+        db.collection("settings").doc("shiftConfig").set({
+            openingCash: amount,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: 'Admin Mang Emong'
+        }).then(() => {
+            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!\nData langsung terupdate di dashboard kasir.");
+            if (inputEl) inputEl.value = '';
+        }).catch((err) => {
+            console.error("Gagal menyimpan modal laci:", err);
+            alert("Gagal menyimpan ke database.");
+        });
+    } else {
+        alert("Database Firestore belum terhubung!");
+    }
+}
