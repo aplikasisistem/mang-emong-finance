@@ -53,11 +53,9 @@ function cleanNumber(value) {
 function applyRolePermissions() {
     const isCashier = currentUserRole === 'cashier' || currentUserRole === 'kasir';
 
-    // 1. Sembunyikan Card Pengeluaran & Net Profit dari Kasir
+    // 1. Sembunyikan Card Produk Terjual (Expense) dari Kasir jika diperlukan, atau sesuaikan
     const cardExpense = document.getElementById('cardExpense');
-    const cardProfit = document.getElementById('cardProfit');
     if (cardExpense) cardExpense.style.display = isCashier ? 'none' : 'block';
-    if (cardProfit) cardProfit.style.display = isCashier ? 'none' : 'block';
 
     // 2. Sembunyikan Tampilan Saldo Modal Awal dari Kasir
     const openingCashWrapper = document.getElementById('openingCashWrapper');
@@ -70,7 +68,7 @@ function applyRolePermissions() {
         el.style.display = isCashier ? 'none' : 'block';
     });
 
-    // 4. Batasi Opsi Pengeluaran pada Form Transaksi Kasir
+    // 4. Batasi Opsi Kategori pada Form Transaksi Kasir
     const txTypeSelect = document.getElementById('txType');
     if (txTypeSelect) {
         if (isCashier) {
@@ -142,7 +140,7 @@ function fetchDataFromFirebase() {
             transactions.push({ id: doc.id, ...doc.data() });
         });
         renderTransactions();
-        renderInventory(); // Update tabel stok otomatis berdasarkan transaksi bahan baku
+        renderInventory();
         updateDashboard();
     }, (error) => {
         console.error("Gagal mengambil data transaksi: ", error);
@@ -173,7 +171,7 @@ function updateCategoryOptions() {
     if (type === 'income') {
         categories = ['Penjualan Dine-in', 'Penjualan Takeaway', 'Online Order (Gofood)', 'Online Order (Grabfood)', 'Online Order (ShopeeFood)'];
     } else {
-        categories = ['Bahan Baku / COGS (Mi/Daging/Bumbu)', 'Operasional (Listrik/Air/Gas/Sewa)', 'Gaji Karyawan', 'Marketing & Promo', 'Perlengkapan / Peralatan'];
+        categories = ['Produk Terjual (Mie / Air Minum / Lainnya)', 'Bahan Baku / COGS', 'Operasional & Lainnya'];
     }
 
     categories.forEach(cat => {
@@ -258,10 +256,10 @@ function deleteTransaction(id) {
     }
 }
 
-// Dashboard & Kalkulasi Keuangan (Menghitung Kas & Bank/QRIS)
+// Dashboard & Kalkulasi Keuangan Versi Terbaru Mang Emong Ramen House
 function updateDashboard() {
     let totalInc = 0;
-    let totalExp = 0;
+    let totalProductsCount = 0;
     let cashSales = 0;
     let bankSales = 0;
 
@@ -272,20 +270,18 @@ function updateDashboard() {
             if (tx.payment === 'Cash') {
                 cashSales += amt;
             } else {
-                bankSales += amt; // QRIS / Transfer / EDC
+                bankSales += amt;
             }
-        } else {
-            totalExp += amt;
+        } else if (tx.type === 'expense' && tx.category.includes('Produk Terjual')) {
+            totalProductsCount += amt; // Menghitung total produk laku (misal mie, air minum)
         }
     });
 
-    let net = totalInc - totalExp;
     let currentDrawer = openingCash + cashSales;
     let totalShiftSales = cashSales + bankSales;
 
     const elInc = document.getElementById('totalIncome');
-    const elExp = document.getElementById('totalExpense');
-    const elNet = document.getElementById('netProfit');
+    const elProductsSold = document.getElementById('totalProductsSold');
     const elDrawer = document.getElementById('drawerCash');
     
     const elShiftCash = document.getElementById('shiftCashSales');
@@ -293,8 +289,7 @@ function updateDashboard() {
     const elShiftTotal = document.getElementById('shiftTotalSales');
 
     if (elInc) elInc.textContent = 'Rp ' + totalInc.toLocaleString('id-ID');
-    if (elExp) elExp.textContent = 'Rp ' + totalExp.toLocaleString('id-ID');
-    if (elNet) elNet.textContent = 'Rp ' + net.toLocaleString('id-ID');
+    if (elProductsSold) elProductsSold.textContent = totalProductsCount + ' Produk';
     if (elDrawer) elDrawer.textContent = 'Rp ' + currentDrawer.toLocaleString('id-ID');
     
     if (elShiftCash) elShiftCash.textContent = 'Rp ' + cashSales.toLocaleString('id-ID');
@@ -341,7 +336,6 @@ function saveShiftClosing() {
     }
 
     const systemCashDrawer = openingCash + cashSales;
-    const totalSemuaKeuangan = physicalCash + bankSales;
 
     const shiftClosingData = {
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -352,14 +346,13 @@ function saveShiftClosing() {
         penjualanBank: bankSales,
         uangFisikLaci: physicalCash,
         selisihKas: physicalCash - systemCashDrawer,
-        totalAkumulasiSemua: totalSemuaKeuangan,
-        status: 'Closed'
+        status: 'Closed & Reset'
     };
 
     if (typeof db !== 'undefined' && db) {
         db.collection("shift_closings").add(shiftClosingData)
           .then(() => {
-              alert("Closing Shift Berhasil!\nData telah tersimpan secara otomatis ke database Firebase.");
+              alert("Closing Shift Berhasil!\nHasil Shift telah di-reset kembali mulai dari 0.");
               closeShiftModal();
               document.getElementById('modalPhysicalCash').value = '';
               updateDashboard();
@@ -373,7 +366,7 @@ function saveShiftClosing() {
     }
 }
 
-// Manajemen Stok Bahan Baku (Otomatis dari Transaksi Pembelian Bahan Baku)
+// Manajemen Stok Bahan Baku
 function renderInventory() {
     const tbody = document.getElementById('inventoryTableBody');
     if (!tbody) return;
@@ -381,7 +374,6 @@ function renderInventory() {
 
     let stockMap = {};
 
-    // 1. Ambil data stok langsung dari koleksi inventory database (jika ada)
     inventory.forEach(item => {
         let nameKey = item.name.trim().toLowerCase();
         stockMap[nameKey] = {
@@ -392,24 +384,6 @@ function renderInventory() {
         };
     });
 
-    // 2. Akumulasikan otomatis dari transaksi Pengeluaran Pembelian Bahan Baku
-    transactions.forEach(tx => {
-        if (tx.type === 'expense' && tx.category && tx.category.includes('Bahan Baku')) {
-            let itemName = tx.note || 'Bahan Baku (Pembelian)';
-            let nameKey = itemName.trim().toLowerCase();
-            
-            if (!stockMap[nameKey]) {
-                stockMap[nameKey] = {
-                    id: tx.id,
-                    name: itemName,
-                    qty: 1, 
-                    unit: 'porsi/pack'
-                };
-            }
-        }
-    });
-
-    // 3. Tampilkan ke dalam tabel
     Object.keys(stockMap).forEach(key => {
         let item = stockMap[key];
         let statusText = item.qty > 5 ? 'Aman' : (item.qty > 0 ? 'Perhatian' : 'Habis');
@@ -427,7 +401,7 @@ function renderInventory() {
     });
 
     if (Object.keys(stockMap).length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Belum ada bahan baku yang dibeli. Catat transaksi pengeluaran bahan baku terlebih dahulu.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Belum ada data stok bahan baku.</td></tr>`;
     }
 }
 
@@ -481,14 +455,11 @@ function setDailyOpeningCash(e) {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedBy: 'Admin Mang Emong'
         }).then(() => {
-            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!\nData langsung terupdate di dashboard kasir.");
+            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!");
             if (inputEl) inputEl.value = '';
         }).catch((err) => {
             console.error("Gagal menyimpan modal laci:", err);
-            alert("Gagal menyimpan ke database.");
         });
-    } else {
-        alert("Database Firestore belum terhubung!");
     }
 }
 
@@ -508,7 +479,7 @@ function processVoiceCommand() {
 
     pendingAIDraft = {
         type: type,
-        category: type === 'income' ? 'Penjualan Dine-in' : 'Bahan Baku / COGS (Mi/Daging/Bumbu)',
+        category: type === 'income' ? 'Penjualan Dine-in' : 'Produk Terjual (Mie / Air Minum / Lainnya)',
         amount: amount,
         payment: 'Cash',
         note: text
@@ -557,7 +528,6 @@ function createNewCashierAccount(event) {
         firebase.auth().createUserWithEmailAndPassword(email, password)
             .then((userCredential) => {
                 const uid = userCredential.user.uid;
-
                 return firebase.database().ref('users/' + uid).set({
                     email: email,
                     nama: name,
