@@ -443,3 +443,49 @@ function toggleSidebar() {
     if (sidebar) sidebar.classList.toggle('active');
     if (overlay) overlay.classList.toggle('active');
 }
+// 1. Fungsi Pindah Tab (Termasuk Tab Manajemen Akun Kasir)
+function switchTab(tabId) {
+    // Sembunyikan semua tab
+    const tabs = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => tab.classList.remove('active'));
+
+    // Hapus status aktif dari semua menu sidebar
+    const menuItems = document.querySelectorAll('.sidebar ul li');
+    menuItems.forEach(item => item.classList.remove('active'));
+
+    // Tampilkan tab yang dipilih
+    const activeTab = document.getElementById('tab-' + tabId);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+}
+
+// 2. Fungsi untuk Pemilik Menambahkan Akun Kasir Baru ke Firebase
+function createNewCashierAccount(event) {
+    event.preventDefault();
+
+    const email = document.getElementById('newEmail').value;
+    const password = document.getElementById('newPassword').value;
+    const name = document.getElementById('newName').value;
+    const role = document.getElementById('newRole').value;
+
+    // Membuat akun di Firebase Authentication
+    firebase.auth().createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            const uid = userCredential.user.uid;
+
+            // Menyimpan data profile & role ke Realtime Database secara online
+            return firebase.database().ref('users/' + uid).set({
+                email: email,
+                nama: name,
+                role: role
+            });
+        })
+        .then(() => {
+            alert('Akun ' + role + ' berhasil ditambahkan!');
+            document.getElementById('createAccountForm').reset();
+        })
+        .catch((error) => {
+            alert('Gagal menambah akun: ' + error.message);
+        });
+}
