@@ -260,7 +260,7 @@ function updateDashboard() {
         let amt = Number(tx.amount) || 0;
         if (tx.type === 'income') {
             totalInc += amt;
-            totalProductsCount += amt; // Menghitung total nilai pemasukan produk terjual (Mie/Air)
+            totalProductsCount += amt; // Total pemasukan produk terjual (Mie/Air)
             if (tx.payment === 'Cash') {
                 cashSales += amt;
             } else {
