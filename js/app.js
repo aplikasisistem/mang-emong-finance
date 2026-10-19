@@ -10,7 +10,7 @@ const firebaseConfig = {
     measurementId: "G-JTPDTWHRQW"
 };
 
-// Inisialisasi Firebase Realtime DB & Firestore (Compat)[cite: 1]
+// Inisialisasi Firebase Realtime DB, Firestore, & Auth (Compat)[cite: 1]
 let dbRealtime = null;
 let dbFirestore = null;
 let auth = null;
@@ -20,7 +20,7 @@ try {
     dbRealtime = firebase.database();
     dbFirestore = firebase.firestore();
     auth = firebase.auth();
-    console.log("Firebase terhubung ke project: manajemen-keuangan-mang-emong!");
+    console.log("Firebase & Auth berhasil terhubung!");
 } catch (e) {
     console.error("Gagal menginisialisasi Firebase:", e);
 }
@@ -37,21 +37,53 @@ document.addEventListener("DOMContentLoaded", () => {
     checkSavedSession();
 });
 
-// --- AUTHENTICATION & ROLE MANAGEMENT (BYPASS LANGSUNG MASUK) ---
+// --- AUTHENTICATION & ROLE MANAGEMENT ---
 
 function loginUser() {
-    const roleSelect = document.getElementById("loginRoleSelect");
-    const selectedRole = roleSelect ? roleSelect.value : "admin";
+    const emailInput = document.getElementById("userEmailInput").value.trim().toLowerCase();
+    const passwordInput = document.getElementById("userPasswordInput").value.trim();
+    const selectedRole = document.getElementById("loginRoleSelect").value;
 
-    // Otomatis sukses masuk sebagai Owner / Admin utama MANG EMOS FINANCE
-    currentUser = {
-        uid: "NfOuYEiGp9Py2uSxuuqN3llGZUI2",
-        role: selectedRole,
-        nama: "firman",
-        email: "firman@ramenhouse.com"
-    };
+    if (!emailInput || !passwordInput) {
+        return alert("Silahkan masukkan Email dan Password!");
+    }
 
-    saveSessionAndProceed();
+    // Bypass khusus untuk Owner Utama (firman@ramenhouse.com)
+    if (emailInput === "firman@ramenhouse.com" || emailInput === "nfouyeigp9py2usxuuqn3llgzui2") {
+        if (passwordInput === "firman123@") {
+            currentUser = {
+                uid: "NfOuYEiGp9Py2uSxuuqN3llGZUI2",
+                role: "admin",
+                nama: "firman",
+                email: "firman@ramenhouse.com"
+            };
+            saveSessionAndProceed();
+            return;
+        } else {
+            return alert("Password salah! Silahkan periksa kembali password Anda.");
+        }
+    }
+
+    // Login via Firebase Authentication untuk akun lainnya
+    if (auth) {
+        auth.signInWithEmailAndPassword(emailInput, passwordInput)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                currentUser = {
+                    uid: user.uid,
+                    role: selectedRole,
+                    nama: user.email.split('@')[0],
+                    email: user.email
+                };
+                saveSessionAndProceed();
+            })
+            .catch((error) => {
+                console.error("Login Error:", error);
+                alert("Gagal Login: Email atau Password tidak ditemukan.");
+            });
+    } else {
+        alert("Firebase Auth belum siap.");
+    }
 }
 
 function saveSessionAndProceed() {
@@ -82,7 +114,12 @@ function toggleRole() {
     if (currentUser.role === "admin") {
         currentUser.role = "kasir";
     } else {
-        currentUser.role = "admin";
+        const uid = prompt("Masukkan Passcode / UID Admin:");
+        if (uid === "NfOuYEiGp9Py2uSxuuqN3llGZUI2" || uid === "firman@ramenhouse.com") {[cite: 1]
+            currentUser.role = "admin";
+        } else {
+            return alert("Akses Admin Ditolak!");
+        }
     }
     setupRoleUI();
 }
