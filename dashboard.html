@@ -29,8 +29,8 @@
             </div>
             <div class="user-profile">
                 <select id="userRoleSelect" onchange="switchRole()">
-                    <option value="admin">Admin: Mang Emong</option>
-                    <option value="cashier" selected>Kasir: Staf Ramen</option>
+                    <option value="admin" selected>Admin: Mang Emong</option>
+                    <option value="cashier">Kasir: Staf Ramen</option>
                 </select>
             </div>
         </div>
@@ -223,7 +223,24 @@
         <!-- REPORTS TAB -->
         <section id="tab-reports" class="tab-content">
             <h2>Laporan Keuangan & Ekspor Data</h2>
+            
+            <!-- Setup Modal Awal Laci Hari Ini (Open Shift) -->
             <div class="section-box">
+                <h3><i class="fa-solid fa-coins"></i> Setup Modal Awal Laci Hari Ini (Open Shift)</h3>
+                <p>Masukkan nominal uang fisik/kembalian yang diberikan kepada kasir untuk operasional hari ini.</p>
+                <form onsubmit="setDailyOpeningCash(event)" style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                        <input type="text" id="inputDailyOpeningCash" inputmode="numeric" placeholder="Contoh: 500.000" required>
+                    </div>
+                    <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Simpan Modal Laci</button>
+                </form>
+                <p style="margin-top: 10px; font-size: 0.9rem; color: #555;">
+                    Modal Laci Aktif Hari Ini: <strong id="adminOpeningCashDisplay" style="color: #27ae60;">Rp 0</strong>
+                </p>
+            </div>
+
+            <!-- Cetak Laporan Ramen House -->
+            <div class="section-box mt-20">
                 <h3>Cetak Laporan Ramen House</h3>
                 <p>Sesuaikan kop surat, logo, dan unduh laporan dalam format Excel atau PDF profesional.</p>
                 <div class="form-row mt-20">
@@ -340,3 +357,8 @@
     <!-- App Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/app.js"></script>
+    
+    <!-- Sidebar Overlay untuk Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+</body>
+</html>
