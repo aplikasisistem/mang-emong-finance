@@ -71,7 +71,7 @@
                 </div>
                 <div class="card expense admin-only-card" id="cardExpense">
                     <h3>Produk Terjual Hari Ini</h3>
-                    <p id="totalProductsSold" style="font-size: 1.5rem; font-weight: 700;">0 Produk</p>
+                    <p id="totalProductsSold" style="font-size: 1.5rem; font-weight: 700;">Rp 0</p>
                 </div>
                 <div class="card cashdrawer">
                     <h3>Kas di Laci (Cash Drawer)</h3>
@@ -103,7 +103,7 @@
             <!-- AI Voice Input Section -->
             <div class="ai-voice-box">
                 <h3><i class="fa-solid fa-microphone-lines"></i> AI Voice Command Simulator</h3>
-                <p>Contoh: "Catat pengeluaran beli mi 200 ribu untuk bahan baku" atau "Catat pemasukan dine in 450 ribu tunai"</p>
+                <p>Contoh: "Catat pengeluaran beli mi 200 ribu untuk bahan baku" atau "Catat pemasukan mie 150 ribu tunai"</p>
                 <div class="voice-controls">
                     <input type="text" id="voiceInputText" placeholder="Ketik atau simulasikan perintah suara...">
                     <button class="btn btn-voice" onclick="processVoiceCommand()"><i class="fa-solid fa-microphone"></i> Proses AI</button>
@@ -119,20 +119,21 @@
                             <label>Jenis Transaksi</label>
                             <select id="txType" onchange="updateCategoryOptions()" required>
                                 <option value="income">Pemasukan (Income)</option>
-                                <option value="expense" class="admin-only-option">Pengeluaran / Produk Terjual (Expense)</option>
+                                <option value="expense" class="admin-only-option">Pengeluaran (Expense)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Kategori / Produk</label>
+                            <label>Kategori Produk</label>
                             <select id="txCategory" required>
-                                <!-- Populated dynamically -->
+                                <option value="Mie">Mie</option>
+                                <option value="Air">Air</option>
                             </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Jumlah (Rp / Qty Produk)</label>
-                            <input type="text" id="txAmount" inputmode="numeric" placeholder="Contoh: 500.000 atau jumlah produk laku" required>
+                            <label>Pemasukan Uang (Rp)</label>
+                            <input type="text" id="txAmount" inputmode="numeric" placeholder="Contoh: 150.000" required>
                         </div>
                         <div class="form-group">
                             <label>Metode Pembayaran</label>
@@ -145,7 +146,7 @@
                     </div>
                     <div class="form-group">
                         <label>Keterangan / Catatan</label>
-                        <input type="text" id="txNote" placeholder="Contoh: Terjual 50 mangkok mie ramen & 50 botol air mineral">
+                        <input type="text" id="txNote" placeholder="Contoh: Penjualan produk mie / air hari ini">
                     </div>
                     <button type="submit" class="btn btn-success">Simpan Transaksi</button>
                 </form>
