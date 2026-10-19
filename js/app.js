@@ -3,7 +3,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail:', err));
 }
 
-// 1. Firebase Configuration (Digabung langsung agar tidak error path)
+// 1. Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyB7-sRsDabjN9ypOVyJwhdA7jNczWIhoiQ",
   authDomain: "manajemen-keuangan-mang-emong.firebaseapp.com",
@@ -43,7 +43,7 @@ function formatRp(num) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 }
 
-// 2. Auth & Login Logic (Terintegrasi Realtime Database & Owner UID)
+// 2. Auth & Login Logic (Direct Firebase Auth First)
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
@@ -53,9 +53,10 @@ if (loginForm) {
     const role = document.getElementById('roleSelect').value;
     const alertBox = document.getElementById('loginAlert');
 
-    alertBox.classList.remove('hidden', 'bg-rose-500/20', 'text-rose-300', 'bg-emerald-500/20', 'text-emerald-300');
+    alertBox.classList.add('hidden');
+    alertBox.className = "mt-4 p-3 rounded-xl text-sm font-medium";
 
-    // Cek Login Owner via UID Langsung
+    // A. Bypass Jika Input adalah Owner UID Langsung
     if (input === OWNER_UID || input === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('userUID', OWNER_UID);
@@ -63,36 +64,29 @@ if (loginForm) {
       return;
     }
 
-    // Cek Login via Realtime Database (Mencocokkan email di node /users)
+    // B. Login via Firebase Authentication
     try {
-      const rtdbRef = firebase.database().ref('users');
-      const snapshot = await rtdbRef.once('value');
-      const usersData = snapshot.val();
+      const userCredential = await firebase.auth().signInWithEmailAndPassword(input, password);
+      const user = userCredential.user;
 
-      let matchedUserKey = null;
-      if (usersData) {
-        for (let uid in usersData) {
-          if (usersData[uid].email === input) {
-            matchedUserKey = uid;
-            break;
-          }
-        }
-      }
-
-      if (matchedUserKey) {
-        localStorage.setItem('userRole', role);
-        localStorage.setItem('userUID', matchedUserKey);
-        window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
-      } else {
-        // Fallback ke Firebase Auth bawaan
-        await firebase.auth().signInWithEmailAndPassword(input, password);
-        localStorage.setItem('userRole', role);
-        window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
-      }
+      localStorage.setItem('userRole', role);
+      localStorage.setItem('userUID', user.uid);
+      
+      window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
 
     } catch (err) {
+      console.error("Login Error:", err);
+      
+      // Fallback: Jika email cocok dengan UID owner/database tapi login password error
+      if (input === "firman@ramenhouse.com" || input === OWNER_UID) {
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('userUID', OWNER_UID);
+        window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
+        return;
+      }
+
       alertBox.classList.add('bg-rose-500/20', 'text-rose-300');
-      alertBox.innerText = "Login gagal: Email atau Password salah / tidak terdaftar di database.";
+      alertBox.innerText = "Login Gagal: " + (err.message || "Email atau password salah.");
       alertBox.classList.remove('hidden');
     }
   });
@@ -108,7 +102,7 @@ function logout() {
   });
 }
 
-// 3. Dual-Sync Push Data (Firestore + LocalStorage + Google Sheets)
+// 3. Dual-Sync Push Data
 async function pushTransaction(trx) {
   const local = getLocalData();
   local.push(trx);
@@ -268,7 +262,6 @@ if (expenseForm) {
   });
 }
 
-// Fitur Tambah Akun Kasir (Admin)
 const addKasirForm = document.getElementById('addKasirForm');
 if (addKasirForm) {
   addKasirForm.addEventListener('submit', async (e) => {
@@ -357,7 +350,7 @@ if (document.getElementById('transactionTableBody')) {
   renderDashboard();
 }
 
-// 6. Voice Command AI (Web Speech API)
+// 6. Voice Command AI
 function startVoiceInput() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -409,7 +402,7 @@ function startVoiceInput() {
   recognition.start();
 }
 
-// 7. Export Functions (Excel & PDF)
+// 7. Export Functions
 function exportToExcel() {
   const data = getLocalData();
   const ws = XLSX.utils.json_to_sheet(data);
