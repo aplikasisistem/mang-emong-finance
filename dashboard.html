@@ -71,7 +71,7 @@
                 </div>
                 <div class="card expense admin-only-card" id="cardExpense">
                     <h3>Produk Terjual Hari Ini</h3>
-                    <p id="totalProductsSold" style="font-size: 1.5rem; font-weight: 700;">Rp 0</p>
+                    <p id="totalProductsSold" style="font-size: 1.5rem; font-weight: 700;">0 Pcs</p>
                 </div>
                 <div class="card cashdrawer">
                     <h3>Kas di Laci (Cash Drawer)</h3>
@@ -103,7 +103,7 @@
             <!-- AI Voice Input Section -->
             <div class="ai-voice-box">
                 <h3><i class="fa-solid fa-microphone-lines"></i> AI Voice Command Simulator</h3>
-                <p>Contoh: "Catat pengeluaran beli mi 200 ribu untuk bahan baku" atau "Catat pemasukan mie 150 ribu tunai"</p>
+                <p>Contoh: "Catat pengeluaran beli mi 200 ribu untuk bahan baku" atau "Catat pemasukan mie 150 ribu 10 pcs"</p>
                 <div class="voice-controls">
                     <input type="text" id="voiceInputText" placeholder="Ketik atau simulasikan perintah suara...">
                     <button class="btn btn-voice" onclick="processVoiceCommand()"><i class="fa-solid fa-microphone"></i> Proses AI</button>
@@ -125,7 +125,8 @@
                         <div class="form-group">
                             <label>Kategori Produk</label>
                             <select id="txCategory" required>
-                                <!-- Diisi otomatis lewat JavaScript -->
+                                <option value="Mie">Mie</option>
+                                <option value="Air">Air</option>
                             </select>
                         </div>
                     </div>
@@ -135,17 +136,13 @@
                             <input type="text" id="txAmount" inputmode="numeric" placeholder="Contoh: 150.000" required>
                         </div>
                         <div class="form-group">
-                            <label>Metode Pembayaran</label>
-                            <select id="txPayment">
-                                <option value="Cash">Tunai (Cash)</option>
-                                <option value="QRIS">Non-Tunai (QRIS / EDC)</option>
-                                <option value="Transfer">Transfer Bank</option>
-                            </select>
+                            <label>Produk Terjual (Pcs / Porsi)</label>
+                            <input type="text" id="txQty" inputmode="numeric" placeholder="Contoh: 10" required>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Keterangan / Catatan</label>
-                        <input type="text" id="txNote" placeholder="Contoh: Penjualan produk mie / air hari ini">
+                        <input type="text" id="txNote" placeholder="Contoh: Penjualan 10 pcs mie ramen / air botol">
                     </div>
                     <button type="submit" class="btn btn-success">Simpan Transaksi</button>
                 </form>
@@ -161,8 +158,8 @@
                             <th>Jenis</th>
                             <th>Kategori</th>
                             <th>Keterangan</th>
-                            <th>Metode</th>
-                            <th>Jumlah</th>
+                            <th>Jumlah Terjual</th>
+                            <th>Total Pemasukan</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
