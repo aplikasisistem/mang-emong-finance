@@ -44,7 +44,7 @@ function formatRp(num) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 }
 
-// 2. Auth & Login Logic
+// 2. Auth & Login Logic (Updated for Realtime Database & UID Check)
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
@@ -56,7 +56,7 @@ if (loginForm) {
 
     alertBox.classList.remove('hidden', 'bg-rose-500/20', 'text-rose-300', 'bg-emerald-500/20', 'text-emerald-300');
 
-    // Login Pemilik via UID
+    // 1. Cek Login Owner via UID Langsung
     if (input === OWNER_UID || input === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('userUID', OWNER_UID);
@@ -64,36 +64,41 @@ if (loginForm) {
       return;
     }
 
-    // Login via Firebase Email Auth
+    // 2. Cek Login via Realtime Database (Sesuai struktur database di Firebase Console Anda)
     try {
-      const res = await firebase.auth().signInWithEmailAndPassword(input, password);
-      localStorage.setItem('userRole', role);
-      localStorage.setItem('userUID', res.user.uid);
-      window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
-    } catch (err) {
-      // Fallback Demo Login jika offline/kustom
-      if (role === 'kasir') {
-        localStorage.setItem('userRole', 'kasir');
-        window.location.href = 'kasir.html';
-      } else {
-        alertBox.classList.add('bg-rose-500/20', 'text-rose-300');
-        alertBox.innerText = "Login gagal: " + err.message;
-        alertBox.classList.remove('hidden');
+      const rtdbRef = firebase.database().ref('users');
+      const snapshot = await rtdbRef.once('value');
+      const usersData = snapshot.val();
+
+      let matchedUserKey = null;
+      if (usersData) {
+        for (let uid in usersData) {
+          if (usersData[uid].email === input) {
+            matchedUserKey = uid;
+            break;
+          }
+        }
       }
+
+      if (matchedUserKey) {
+        // Jika email ditemukan di Realtime Database
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('userUID', matchedUserKey);
+        window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
+      } else {
+        // Fallback jika tidak ada di RTDB, coba cek Firebase Auth bawaan
+        await firebase.auth().signInWithEmailAndPassword(input, password);
+        localStorage.setItem('userRole', role);
+        window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
+      }
+
+    } catch (err) {
+      alertBox.classList.add('bg-rose-500/20', 'text-rose-300');
+      alertBox.innerText = "Login gagal: Email atau Password salah / tidak terdaftar di database.";
+      alertBox.classList.remove('hidden');
     }
   });
 }
-
-function logout() {
-  localStorage.removeItem('userRole');
-  localStorage.removeItem('userUID');
-  firebase.auth().signOut().then(() => {
-    window.location.href = 'index.html';
-  }).catch(() => {
-    window.location.href = 'index.html';
-  });
-}
-
 // 3. Dual-Sync Push Data (Firestore + LocalStorage + Google Sheets)
 async function pushTransaction(trx) {
   // LocalStorage
