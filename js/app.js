@@ -1,429 +1,480 @@
-const input = document.getElementById('loginInput').value.trim();
-const role = document.getElementById('roleSelect').value;
-
-// Bypass mutlak untuk Owner UID atau Email Owner
-if (input === "NfOuYEiGp9Py2uSxuuqN3llGZUI2" || input.toLowerCase() === "firman@ramenhouse.com") {
-  localStorage.setItem('userRole', role);
-  localStorage.setItem('userUID', "NfOuYEiGp9Py2uSxuuqN3llGZUI2");
-  window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
-  return;
-}
-// Register Service Worker PWA
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail:', err));
-}
-
-// 1. Firebase Configuration
+// Konfigurasi Firebase untuk Mang Emong Ramen Finance
 const firebaseConfig = {
-  apiKey: "AIzaSyB7-sRsDabjN9ypOVyJwhdA7jNczWIhoiQ",
-  authDomain: "manajemen-keuangan-mang-emong.firebaseapp.com",
-  databaseURL: "https://manajemen-keuangan-mang-emong-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "manajemen-keuangan-mang-emong",
-  storageBucket: "manajemen-keuangan-mang-emong.firebasestorage.app",
-  messagingSenderId: "719220664193",
-  appId: "1:719220664193:web:7141f6262a38c5851b6a80",
-  measurementId: "G-JTPDTWHRQW"
+    apiKey: "AIzaSyB7-sRsDabjN9ypOVyJwhdA7jNczWIhoiQ",
+    authDomain: "manajemen-keuangan-mang-emong.firebaseapp.com",
+    databaseURL: "https://manajemen-keuangan-mang-emong-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "manajemen-keuangan-mang-emong",
+    storageBucket: "manajemen-keuangan-mang-emong.firebasestorage.app",
+    messagingSenderId: "719220664193",
+    appId: "1:719220664193:web:7141f6262a38c5851b6a80",
+    measurementId: "G-JTPDTWHRQW"
 };
 
-const OWNER_UID = "NfOuYEiGp9Py2uSxuuqN3llGZUI2";
-const GOOGLE_SHEETS_WEBHOOK_URL = ""; 
+// Inisialisasi Firebase Realtime DB & Firestore (Compat)
+let dbRealtime = null;
+let dbFirestore = null;
 
-let db = null;
 try {
-  if (typeof firebase !== 'undefined' && !firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    console.log("Firebase & Firestore terhubung!");
-  }
+    dbRealtime = firebase.database(); // Integrasi ke Realtime DB
+    dbFirestore = firebase.firestore(); // Firestore fallback
+    console.log("Firebase terhubung ke project: manajemen-keuangan-mang-emong!");
 } catch (e) {
-  console.error("Gagal Inisialisasi Firebase:", e);
+    console.error("Gagal menginisialisasi Firebase:", e);
 }
 
-// Contoh Realtime Listener Firestore untuk Dashboard Admin
-function listenRealtimeTransactions() {
-  if (db && document.getElementById('transactionTableBody')) {
-    db.collection('transactions').orderBy('timestamp', 'desc').onSnapshot((snapshot) => {
-      let liveData = [];
-      snapshot.forEach((doc) => {
-        liveData.push(doc.data());
-      });
-      // Simpan ke local storage agar sinkron
-      saveLocalData(liveData);
-      // Render ulang dashboard secara realtime
-      renderDashboard();
-    }, (err) => {
-      console.warn("Gagal mendengarkan realtime Firestore, menggunakan LocalStorage:", err);
-    });
-  }
-}
+// Global Application State
+let currentUser = null; // { uid, role, nama, email }[cite: 1]
+let transactions = [];
+let currentShiftCash = 0;
+let googleSheetsWebhookUrl = localStorage.getItem("mang_emos_gsheet_url") || "";
 
-// Panggil fungsi ini di bagian bawah app.js jika berada di halaman dashboard
-if (document.getElementById('transactionTableBody')) {
-  listenRealtimeTransactions();
-}
+// Initialize App
+document.addEventListener("DOMContentLoaded", () => {
+    loadLocalData();
+    checkSavedSession();
+});
 
-// 2. Auth & Login Logic (Bypass UID & Direct Auth)
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const input = document.getElementById('loginInput').value.trim();
-    const password = document.getElementById('passwordInput').value.trim();
-    const role = document.getElementById('roleSelect').value;
-    const alertBox = document.getElementById('loginAlert');
+// --- AUTHENTICATION & ROLE MANAGEMENT ---
 
-    if (alertBox) {
-      alertBox.className = "mt-4 p-3 rounded-xl text-sm font-medium hidden";
-    }
+function loginUser() {
+    const uid = document.getElementById("userUidInput").value.trim();
+    if (!uid) return alert("Silahkan masukkan UID!");
 
-    // A. BYPASS OWNER UID ATAU EMAIL (Pasti Masuk)
-    if (input === OWNER_UID || input.toLowerCase() === "firman@ramenhouse.com" || input.includes("NfOuYEiGp")) {
-      localStorage.setItem('userRole', 'admin'); // Paksa jadi admin agar aman
-      localStorage.setItem('userUID', OWNER_UID);
-      window.location.href = 'dashboard.html';
-      return;
-    }
-
-    // B. JIKA LOGIN MENGGUNAKAN AKUN KASIR VIA FIREBASE AUTH
-    try {
-      if (typeof firebase !== 'undefined' && firebase.auth) {
-        const userCred = await firebase.auth().signInWithEmailAndPassword(input, password);
-        localStorage.setItem('userRole', role);
-        localStorage.setItem('userUID', userCred.user.uid);
-        window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
-      } else {
-        localStorage.setItem('userRole', role);
-        window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
-      }
-    } catch (err) {
-      console.error("Login Error:", err);
-      if (alertBox) {
-        alertBox.className = "mt-4 p-3 rounded-xl text-sm font-medium bg-rose-500/20 text-rose-300 block";
-        alertBox.innerText = "Login gagal: " + (err.message || "Periksa email dan password Anda.");
-      }
-    }
-  });
-}
-// 3. Dual-Sync Push Data
-async function pushTransaction(trx) {
-  const local = getLocalData();
-  local.push(trx);
-  saveLocalData(local);
-
-  if (db) {
-    try {
-      await db.collection('transactions').add(trx);
-    } catch (err) {
-      console.warn("Firestore offline, tersimpan di LocalStorage");
-    }
-  }
-
-  if (GOOGLE_SHEETS_WEBHOOK_URL) {
-    try {
-      fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(trx)
-      });
-    } catch (err) {
-      console.warn("Google Sheets Webhook error");
-    }
-  }
-}
-
-// 4. Modul Kasir Logic
-const kasirIncomeForm = document.getElementById('kasirIncomeForm');
-if (kasirIncomeForm) {
-  kasirIncomeForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const method = document.getElementById('kasirPaymentMethod').value;
-    const amount = parseFloat(document.getElementById('kasirAmount').value);
-    const items = document.getElementById('kasirItems').value;
-
-    const trx = {
-      timestamp: new Date().toISOString(),
-      type: 'income',
-      category: method,
-      amount: amount,
-      items: items,
-      audit: '-'
-    };
-
-    await pushTransaction(trx);
-    alert('Pemasukan berhasil disimpan!');
-    kasirIncomeForm.reset();
-    updateKasirDisplay();
-  });
-}
-
-function updateKasirDisplay() {
-  const data = getLocalData();
-  const currentShiftIncome = data.filter(d => d.type === 'income');
-  
-  const cashTotal = currentShiftIncome
-    .filter(d => d.category === 'Tunai')
-    .reduce((sum, d) => sum + d.amount, 0);
-
-  const nonCashTotal = currentShiftIncome
-    .filter(d => d.category !== 'Tunai')
-    .reduce((sum, d) => sum + d.amount, 0);
-
-  const cashDisp = document.getElementById('systemCashDisplay');
-  const nonCashDisp = document.getElementById('systemNonCashDisplay');
-
-  if (cashDisp) cashDisp.innerText = formatRp(cashTotal);
-  if (nonCashDisp) nonCashDisp.innerText = formatRp(nonCashTotal);
-
-  return cashTotal;
-}
-
-let lastCalculatedVariance = null;
-
-function calculateVariance() {
-  const systemCash = updateKasirDisplay();
-  const physicalCash = parseFloat(document.getElementById('physicalCashInput').value || 0);
-  const diff = physicalCash - systemCash;
-
-  const auditBox = document.getElementById('auditBox');
-  const auditTitle = document.getElementById('auditTitle');
-  const auditDiff = document.getElementById('auditDiff');
-
-  if (!auditBox) return;
-
-  auditBox.className = "p-4 rounded-xl border text-center space-y-1 block";
-
-  let statusText = "";
-  if (diff === 0) {
-    statusText = "PAS (Sesuai)";
-    auditBox.classList.add('bg-emerald-500/20', 'border-emerald-500');
-  } else if (diff < 0) {
-    statusText = "MINUS (Kurang)";
-    auditBox.classList.add('bg-rose-500/20', 'border-rose-500');
-  } else {
-    statusText = "SURPLUS (Lebih)";
-    auditBox.classList.add('bg-amber-500/20', 'border-amber-500');
-  }
-
-  auditTitle.innerText = `Status Audit: ${statusText}`;
-  auditDiff.innerText = formatRp(diff);
-  lastCalculatedVariance = { statusText, diff };
-}
-
-async function processClosingShift() {
-  if (!lastCalculatedVariance) {
-    calculateVariance();
-  }
-
-  const systemCash = updateKasirDisplay();
-  const physicalCash = parseFloat(document.getElementById('physicalCashInput').value || 0);
-
-  const closingLog = {
-    timestamp: new Date().toISOString(),
-    type: 'closing',
-    category: 'Closing Shift Audit',
-    items: `Fisik: ${formatRp(physicalCash)} | System: ${formatRp(systemCash)}`,
-    amount: physicalCash,
-    audit: `${lastCalculatedVariance ? lastCalculatedVariance.statusText : 'Selesai'} (${formatRp(physicalCash - systemCash)})`
-  };
-
-  await pushTransaction(closingLog);
-
-  localStorage.setItem('mang_emos_transactions', JSON.stringify([]));
-  alert('Closing shift berhasil! Log disimpan & hitungan kasir direset ke 0.');
-  if (document.getElementById('physicalCashInput')) document.getElementById('physicalCashInput').value = '';
-  if (document.getElementById('auditBox')) document.getElementById('auditBox').className = 'hidden';
-  lastCalculatedVariance = null;
-  updateKasirDisplay();
-}
-
-if (document.getElementById('systemCashDisplay')) {
-  updateKasirDisplay();
-}
-
-// 5. Admin Dashboard Logic
-const expenseForm = document.getElementById('expenseForm');
-if (expenseForm) {
-  expenseForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const category = document.getElementById('expenseCategory').value;
-    const amount = parseFloat(document.getElementById('expenseAmount').value);
-    const note = document.getElementById('expenseNote').value;
-
-    const trx = {
-      timestamp: new Date().toISOString(),
-      type: 'expense',
-      category: category,
-      amount: amount,
-      items: note,
-      audit: '-'
-    };
-
-    await pushTransaction(trx);
-    alert('Catatan pengeluaran berhasil disimpan!');
-    expenseForm.reset();
-    renderDashboard();
-  });
-}
-
-const addKasirForm = document.getElementById('addKasirForm');
-if (addKasirForm) {
-  addKasirForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('kasirEmail').value;
-    const password = document.getElementById('kasirPassword').value;
-
-    try {
-      if (typeof firebase !== 'undefined' && firebase.auth) {
-        const userCred = await firebase.auth().createUserWithEmailAndPassword(email, password);
-        await firebase.database().ref('users/' + userCred.user.uid).set({
-          email: email,
-          nama: email.split('@')[0],
-          role: 'kasir'
+    // Cek akun pemilik utama berdasarkan database Realtime DB (users/UID)[cite: 1]
+    if (dbRealtime) {
+        dbRealtime.ref("users/" + uid).once("value").then((snapshot) => {
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                currentUser = {
+                    uid: uid,
+                    role: userData.role || "kasir",
+                    nama: userData.nama || "User",
+                    email: userData.email || ""
+                };
+                saveSessionAndProceed();
+            } else {
+                // Default Kasir jika UID tidak terdaftar secara eksplisit
+                currentUser = { uid: uid, role: "kasir", nama: "Kasir Laci", email: "" };
+                saveSessionAndProceed();
+            }
+        }).catch((err) => {
+            console.warn("Realtime DB check failed, using fallback mode", err);
+            fallbackLogin(uid);
         });
-      }
-      alert(`Akun Kasir ${email} berhasil dibuat!`);
-      addKasirForm.reset();
-    } catch (err) {
-      alert("Gagal membuat akun: " + err.message);
+    } else {
+        fallbackLogin(uid);
     }
-  });
+}
+
+function fallbackLogin(uid) {
+    // Check owner hardcoded fallback UID[cite: 1]
+    if (uid === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
+        currentUser = { uid: uid, role: "admin", nama: "firman", email: "firman@ramenhouse.com" };
+    } else {
+        currentUser = { uid: uid, role: "kasir", nama: "Kasir Laci", email: "" };
+    }
+    saveSessionAndProceed();
+}
+
+function saveSessionAndProceed() {
+    localStorage.setItem("mang_emos_user", JSON.stringify(currentUser));
+    document.getElementById("loginModal").classList.add("hidden");
+    document.getElementById("appContainer").classList.remove("hidden");
+    setupRoleUI();
+    syncDataFromFirebase();
+}
+
+function checkSavedSession() {
+    const saved = localStorage.getItem("mang_emos_user");
+    if (saved) {
+        currentUser = JSON.parse(saved);
+        document.getElementById("loginModal").classList.add("hidden");
+        document.getElementById("appContainer").classList.remove("hidden");
+        setupRoleUI();
+        syncDataFromFirebase();
+    }
+}
+
+function logout() {
+    localStorage.removeItem("mang_emos_user");
+    location.reload();
+}
+
+function toggleRole() {
+    if (currentUser.role === "admin") {
+        currentUser.role = "kasir";
+    } else {
+        // Minta konfirmasi jika switch ke Admin
+        const uid = prompt("Masukkan Passcode / UID Admin:");
+        if (uid === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") { // Match dengan UID di Firebase[cite: 1]
+            currentUser.role = "admin";
+        } else {
+            return alert("Akses Admin Ditolak!");
+        }
+    }
+    setupRoleUI();
+}
+
+function setupRoleUI() {
+    document.getElementById("userInfo").innerText = `Role: ${currentUser.role.toUpperCase()} (${currentUser.nama})`;
+    
+    const adminToolBar = document.getElementById("adminToolBar");
+    const expenseSection = document.getElementById("expenseAdminSection");
+    const addUserSection = document.getElementById("addUserAdminSection");
+
+    if (currentUser.role === "admin") {
+        adminToolBar.classList.remove("hidden");
+        expenseSection.classList.remove("hidden");
+        addUserSection.classList.remove("hidden");
+    } else {
+        adminToolBar.classList.add("hidden");
+        expenseSection.classList.add("hidden");
+        addUserSection.classList.add("hidden");
+    }
+    renderDashboard();
+}
+
+// --- DATA TRANSAKSI & REALTIME SYNC ---
+
+function handleIncomeSubmit(e) {
+    e.preventDefault();
+    const method = document.getElementById("incPaymentMethod").value;
+    const amount = parseFloat(document.getElementById("incAmount").value);
+    const note = document.getElementById("incNote").value;
+
+    const transaction = {
+        id: "INC-" + Date.now(),
+        type: "pemasukan",
+        category: method.includes("Tunai") ? "Pemasukan Tunai" : "Pemasukan Non-Tunai",
+        method: method,
+        amount: amount,
+        note: note,
+        timestamp: new Date().toISOString(),
+        user: currentUser.nama
+    };
+
+    if (method === "Tunai (Cash)") {
+        currentShiftCash += amount;
+    }
+
+    saveTransaction(transaction);
+    document.getElementById("incomeForm").reset();
+}
+
+function handleExpenseSubmit(e) {
+    e.preventDefault();
+    const category = document.getElementById("expCategory").value;
+    const amount = parseFloat(document.getElementById("expAmount").value);
+    const note = document.getElementById("expNote").value;
+
+    const transaction = {
+        id: "EXP-" + Date.now(),
+        type: "pengeluaran",
+        category: category,
+        method: "Tunai Laci",
+        amount: amount,
+        note: note,
+        timestamp: new Date().toISOString(),
+        user: currentUser.nama
+    };
+
+    saveTransaction(transaction);
+    document.getElementById("expenseForm").reset();
+}
+
+function saveTransaction(item) {
+    // 1. Simpan Lokal Browser[cite: 1]
+    transactions.unshift(item);
+    localStorage.setItem("mang_emos_trans", JSON.stringify(transactions));
+    localStorage.setItem("mang_emos_shift_cash", currentShiftCash.toString());
+
+    // 2. Simpan Firebase Realtime Database[cite: 1]
+    if (dbRealtime) {
+        dbRealtime.ref("transactions/" + item.id).set(item);
+    }
+
+    // 3. Kirim ke Webhook Google Sheets[cite: 1]
+    sendToGoogleSheets(item);
+
+    renderDashboard();
+}
+
+function syncDataFromFirebase() {
+    if (!dbRealtime) return;
+    dbRealtime.ref("transactions").limitToLast(100).on("value", (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            transactions = Object.values(data).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            localStorage.setItem("mang_emos_trans", JSON.stringify(transactions));
+            recalculateCurrentShiftCash();
+            renderDashboard();
+        }
+    });
+}
+
+function loadLocalData() {
+    const localTrans = localStorage.getItem("mang_emos_trans");
+    if (localTrans) transactions = JSON.parse(localTrans);
+    const savedCash = localStorage.getItem("mang_emos_shift_cash");
+    if (savedCash) currentShiftCash = parseFloat(savedCash);
+}
+
+function recalculateCurrentShiftCash() {
+    // Hitung akumulasi cash tunai yang belum di-closing
+    let cash = 0;
+    transactions.forEach(t => {
+        if (t.type === "pemasukan" && t.method === "Tunai (Cash)") cash += t.amount;
+        if (t.type === "closing") cash = 0; // Reset point
+    });
+    currentShiftCash = cash;
+}
+
+// --- CLOSING SHIFT & CASH VARIANCE ---
+
+function calculateCashVariance() {
+    const physicalInput = parseFloat(document.getElementById("physicalCashInput").value) || 0;
+    const variance = physicalInput - currentShiftCash;
+    
+    const resultBox = document.getElementById("varianceResultBox");
+    const statusText = document.getElementById("varianceStatusText");
+    const amountText = document.getElementById("varianceAmountText");
+
+    resultBox.classList.remove("hidden", "bg-green-100", "bg-red-100", "bg-yellow-100");
+
+    if (variance === 0) {
+        resultBox.classList.add("bg-green-100");
+        statusText.innerText = "PAS (Sesuai)";
+        statusText.className = "text-green-700 font-bold";
+        amountText.innerText = "Tidak ada selisih di laci.";
+    } else if (variance < 0) {
+        resultBox.classList.add("bg-red-100");
+        statusText.innerText = "MINUS (Kurang)";
+        statusText.className = "text-red-700 font-bold";
+        amountText.innerText = `Kasir kekurangan: Rp ${Math.abs(variance).toLocaleString('id-ID')}`;
+    } else {
+        resultBox.classList.add("bg-yellow-100");
+        statusText.innerText = "SURPLUS (Lebih)";
+        statusText.className = "text-yellow-800 font-bold";
+        amountText.innerText = `Kelebihan fisik laci: Rp ${variance.toLocaleString('id-ID')}`;
+    }
+}
+
+function processClosingShift() {
+    const physicalInput = document.getElementById("physicalCashInput").value;
+    if (physicalInput === "") return alert("Harap input fisik uang tunai di laci!");
+
+    const physical = parseFloat(physicalInput);
+    const variance = physical - currentShiftCash;
+
+    const logAudit = {
+        id: "AUDIT-" + Date.now(),
+        type: "closing",
+        category: "Closing Shift",
+        method: "Audit Laci",
+        amount: physical,
+        note: `Audit Kas Laci. System: Rp ${currentShiftCash.toLocaleString()}, Fisik: Rp ${physical.toLocaleString()}, Variance: Rp ${variance.toLocaleString()}`,
+        timestamp: new Date().toISOString(),
+        user: currentUser.nama
+    };
+
+    currentShiftCash = 0; // Reset kas tunai[cite: 1]
+    document.getElementById("physicalCashInput").value = "";
+    document.getElementById("varianceResultBox").classList.add("hidden");
+
+    saveTransaction(logAudit);
+    alert("Closing Shift Berhasil! Kas laci dikembalikan ke Rp 0.");
+}
+
+// --- AI VOICE INPUT (WEB SPEECH API) ---
+
+function startVoiceInput() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        return alert("Browser Anda tidak mendukung Web Speech API!");
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'id-ID';
+    recognition.interimResults = false;
+
+    const statusSpan = document.getElementById("voiceStatus");
+    statusSpan.innerText = "Mendengarkan...";
+
+    recognition.start();
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        statusSpan.innerText = `Terdeteksi: "${transcript}"`;
+        parseVoiceCommand(transcript);
+    };
+
+    recognition.onerror = function() {
+        statusSpan.innerText = "Gagal mendengarkan. Coba lagi.";
+    };
+}
+
+function parseVoiceCommand(text) {
+    // Contoh kalimat: "Beli bahan baku lima puluh ribu keterangan beli telur"
+    const numberMatch = text.match(/\d+/g) || parseIndonesianNumbers(text);
+    let amount = 0;
+    
+    if (numberMatch) {
+        amount = typeof numberMatch === 'number' ? numberMatch : parseInt(numberMatch.join(''));
+    }
+
+    if (amount > 0) {
+        document.getElementById("expAmount").value = amount;
+        document.getElementById("expNote").value = text;
+        alert(`AI Suara Terdeteksi!\nNominal: Rp ${amount}\nKeterangan: ${text}\n\nSilahkan cek & klik Simpan Pengeluaran.`);
+    } else {
+        alert("Sistem tidak menemukan angka nominal pada perintah suara: " + text);
+    }
+}
+
+function parseIndonesianNumbers(text) {
+    if (text.includes("ribu")) {
+        const parts = text.split("ribu")[0].trim().split(" ");
+        const lastWord = parts[parts.length - 1];
+        const map = { "satu": 1, "dua": 2, "tiga": 3, "empat": 4, "lima": 5, "enam": 6, "tujuh": 7, "delapan": 8, "sembilan": 9, "sepuluh": 10, "lima puluh": 50, "seratus": 100 };
+        return (map[lastWord] || 10) * 1000;
+    }
+    return 0;
+}
+
+// --- GOOGLE SHEETS DUAL-SYNC ---
+
+function openGoogleSheetsPrompt() {
+    const url = prompt("Masukkan Google Apps Script Webhook URL Anda:", googleSheetsWebhookUrl);
+    if (url !== null) {
+        googleSheetsWebhookUrl = url;
+        localStorage.setItem("mang_emos_gsheet_url", url);
+        alert("URL Webhook Google Sheets berhasil disimpan!");
+    }
+}
+
+function sendToGoogleSheets(payload) {
+    if (!googleSheetsWebhookUrl) return;
+    fetch(googleSheetsWebhookUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    }).catch(err => console.error("Gagal kirim ke Google Sheets:", err));
+}
+
+// --- ADD KASIR USER TO FIREBASE REALTIME DB ---
+
+function handleAddUser(e) {
+    e.preventDefault();
+    const uid = document.getElementById("newUserId").value.trim();
+    const nama = document.getElementById("newUserName").value.trim();
+    const email = document.getElementById("newUserEmail").value.trim();
+
+    if (dbRealtime) {
+        dbRealtime.ref("users/" + uid).set({
+            nama: nama,
+            email: email,
+            role: "kasir"
+        }).then(() => {
+            alert(`Akun Kasir ${nama} berhasil ditambahkan!`);
+            e.target.reset();
+        });
+    }
+}
+
+// --- DASHBOARD RENDER & REPORT FILTERING ---
+
+function filterDataByPeriod(data) {
+    const period = document.getElementById("filterPeriod").value;
+    const now = new Date();
+
+    return data.filter(item => {
+        const tDate = new Date(item.timestamp);
+        if (period === "daily") {
+            return tDate.toDateString() === now.toDateString();
+        } else if (period === "weekly") {
+            const firstDayOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+            return tDate >= firstDayOfWeek;
+        } else if (period === "monthly") {
+            return tDate.getMonth() === new Date().getMonth() && tDate.getFullYear() === new Date().getFullYear();
+        } else if (period === "yearly") {
+            return tDate.getFullYear() === new Date().getFullYear();
+        }
+        return true;
+    });
 }
 
 function renderDashboard() {
-  const filter = document.getElementById('filterPeriod') ? document.getElementById('filterPeriod').value : 'all';
-  let data = getLocalData();
+    document.getElementById("systemCashDisplay").innerText = `Rp ${currentShiftCash.toLocaleString('id-ID')}`;
 
-  const now = new Date();
-  if (filter === 'daily') {
-    data = data.filter(d => new Date(d.timestamp).toDateString() === now.toDateString());
-  } else if (filter === 'weekly') {
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    data = data.filter(d => new Date(d.timestamp) >= sevenDaysAgo);
-  } else if (filter === 'monthly') {
-    data = data.filter(d => new Date(d.timestamp).getMonth() === new Date().getMonth() && new Date(d.timestamp).getFullYear() === new Date().getFullYear());
-  } else if (filter === 'yearly') {
-    data = data.filter(d => new Date(d.timestamp).getFullYear() === new Date().getFullYear());
-  }
+    const filtered = filterDataByPeriod(transactions);
+    document.getElementById("dataCount").innerText = `${filtered.length} Data Terrekam`;
 
-  let cashIncome = 0;
-  let nonCashIncome = 0;
-  let totalExpense = 0;
+    let cashIncome = 0;
+    let nonCashIncome = 0;
+    let totalExpense = 0;
 
-  const tbody = document.getElementById('transactionTableBody');
-  if (tbody) tbody.innerHTML = '';
+    const tbody = document.getElementById("transactionTableBody");
+    tbody.innerHTML = "";
 
-  data.forEach(item => {
-    if (item.type === 'income') {
-      if (item.category === 'Tunai') cashIncome += item.amount;
-      else nonCashIncome += item.amount;
-    } else if (item.type === 'expense') {
-      totalExpense += item.amount;
-    }
+    filtered.forEach(item => {
+        if (item.type === "pemasukan") {
+            if (item.method === "Tunai (Cash)") cashIncome += item.amount;
+            else nonCashIncome += item.amount;
+        } else if (item.type === "pengeluaran") {
+            totalExpense += item.amount;
+        }
 
-    if (tbody) {
-      const tr = document.createElement('tr');
-      tr.className = 'border-b border-slate-700/50 hover:bg-slate-750';
-      const dateStr = new Date(item.timestamp).toLocaleString('id-ID');
-      
-      let badgeType = item.type === 'income' 
-        ? '<span class="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md font-semibold">Pemasukan</span>'
-        : (item.type === 'expense' 
-            ? '<span class="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded-md font-semibold">Pengeluaran</span>'
-            : '<span class="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md font-semibold">Closing Shift</span>');
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-gray-50 border-b";
 
-      tr.innerHTML = `
-        <td class="p-3.5 text-slate-400">${dateStr}</td>
-        <td class="p-3.5">${badgeType}</td>
-        <td class="p-3.5 font-medium">${item.category}</td>
-        <td class="p-3.5">${item.items}</td>
-        <td class="p-3.5 font-bold ${item.type === 'expense' ? 'text-rose-400' : 'text-emerald-400'}">${formatRp(item.amount)}</td>
-        <td class="p-3.5 text-slate-400">${item.audit || '-'}</td>
-      `;
-      tbody.appendChild(tr);
-    }
-  });
+        const badgeClass = item.type === "pemasukan" ? "bg-green-100 text-green-800" :
+                           item.type === "pengeluaran" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800";
 
-  const netProfit = (cashIncome + nonCashIncome) - totalExpense;
+        tr.innerHTML = `
+            <td class="p-3 text-xs">${new Date(item.timestamp).toLocaleString('id-ID')}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${badgeClass}">${item.method || item.type}</span></td>
+            <td class="p-3">
+                <p class="font-medium text-gray-800">${item.category}</p>
+                <p class="text-xs text-gray-500">${item.note}</p>
+            </td>
+            <td class="p-3 font-bold ${item.type === 'pengeluaran' ? 'text-red-600' : 'text-green-600'}">
+                ${item.type === 'pengeluaran' ? '-' : '+'} Rp ${item.amount.toLocaleString('id-ID')}
+            </td>
+            <td class="p-3 text-xs text-gray-500">${item.user || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 
-  if (document.getElementById('cardCashIncome')) document.getElementById('cardCashIncome').innerText = formatRp(cashIncome);
-  if (document.getElementById('cardNonCashIncome')) document.getElementById('cardNonCashIncome').innerText = formatRp(nonCashIncome);
-  if (document.getElementById('cardTotalExpense')) document.getElementById('cardTotalExpense').innerText = formatRp(totalExpense);
-  if (document.getElementById('cardNetProfit')) document.getElementById('cardNetProfit').innerText = formatRp(netProfit);
+    const netProfit = (cashIncome + nonCashIncome) - totalExpense;
+
+    document.getElementById("cardCashIncome").innerText = `Rp ${cashIncome.toLocaleString('id-ID')}`;
+    document.getElementById("cardNonCashIncome").innerText = `Rp ${nonCashIncome.toLocaleString('id-ID')}`;
+    document.getElementById("cardExpense").innerText = `Rp ${totalExpense.toLocaleString('id-ID')}`;
+    document.getElementById("cardNetProfit").innerText = `Rp ${netProfit.toLocaleString('id-ID')}`;
 }
 
-if (document.getElementById('transactionTableBody')) {
-  renderDashboard();
-}
+// --- EXPORT TO EXCEL & PDF ---
 
-// 6. Voice Command AI
-function startVoiceInput() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Browser Anda tidak mendukung fitur Voice Recognition.");
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = 'id-ID';
-  const micBtn = document.getElementById('micBtn');
-
-  recognition.onstart = () => {
-    micBtn.classList.add('bg-rose-600', 'animate-pulse');
-    micBtn.innerText = "🎙️ Mendengarkan...";
-  };
-
-  recognition.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript.toLowerCase();
-    micBtn.classList.remove('bg-rose-600', 'animate-pulse');
-    micBtn.innerText = "🎙️ AI Suara";
-
-    const numberMatch = transcript.match(/\d+/g);
-    if (numberMatch) {
-      const amount = parseInt(numberMatch.join(''));
-      const note = transcript.replace(/\d+/g, '').replace('pengeluaran', '').replace('beli', '').trim();
-      
-      const trx = {
-        timestamp: new Date().toISOString(),
-        type: 'expense',
-        category: 'Operasional AI Suara',
-        amount: amount,
-        items: note || 'Pengeluaran Voice Command',
-        audit: '-'
-      };
-
-      await pushTransaction(trx);
-      alert(`AI Suara Berhasil Mencatat:\n${note} - ${formatRp(amount)}`);
-      renderDashboard();
-    } else {
-      alert(`Suara terdeteksi: "${transcript}". Harap sebutkan nominal angka.`);
-    }
-  };
-
-  recognition.onerror = () => {
-    micBtn.classList.remove('bg-rose-600', 'animate-pulse');
-    micBtn.innerText = "🎙️ AI Suara";
-  };
-
-  recognition.start();
-}
-
-// 7. Export Functions
 function exportToExcel() {
-  const data = getLocalData();
-  if (typeof XLSX !== 'undefined') {
-    const ws = XLSX.utils.json_to_sheet(data);
+    const dataToExport = filterDataByPeriod(transactions).map(t => ({
+        Waktu: new Date(t.timestamp).toLocaleString('id-ID'),
+        Tipe: t.type,
+        Kategori: t.category,
+        Metode: t.method,
+        Nominal: t.amount,
+        Keterangan: t.note,
+        Operator: t.user
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Laporan Keuangan");
     XLSX.writeFile(wb, `Laporan_Mang_Emos_${new Date().toISOString().slice(0,10)}.xlsx`);
-  } else {
-    alert("Library XLSX sedang di-load, coba beberapa saat lagi.");
-  }
 }
 
 function exportToPDF() {
-  if (typeof window.jspdf !== 'undefined') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
@@ -431,24 +482,19 @@ function exportToPDF() {
     doc.setFontSize(10);
     doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 22);
 
-    const data = getLocalData();
-    const tableRows = data.map(d => [
-      new Date(d.timestamp).toLocaleDateString('id-ID'),
-      d.type,
-      d.category,
-      d.items,
-      d.amount,
-      d.audit || '-'
+    const rows = filterDataByPeriod(transactions).map(t => [
+        new Date(t.timestamp).toLocaleDateString('id-ID'),
+        t.category,
+        t.method,
+        `Rp ${t.amount.toLocaleString('id-ID')}`,
+        t.note
     ]);
 
     doc.autoTable({
-      head: [['Tanggal', 'Tipe', 'Kategori', 'Keterangan', 'Nominal', 'Audit']],
-      body: tableRows,
-      startY: 28,
+        head: [['Tanggal', 'Kategori', 'Metode', 'Nominal', 'Keterangan']],
+        body: rows,
+        startY: 28,
     });
 
     doc.save(`Laporan_Mang_Emos_${new Date().toISOString().slice(0,10)}.pdf`);
-  } else {
-    alert("Library PDF sedang di-load, coba beberapa saat lagi.");
-  }
 }
