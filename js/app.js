@@ -33,7 +33,7 @@ function formatRupiahInput(input) {
 
 // Pasang event listener ke semua input angka di aplikasi
 function initRupiahInputs() {
-    const numberInputs = document.querySelectorAll('input[type="number"], input#txAmount, input#invQty, input#modalOpeningCash, input#modalPhysicalCash');
+    const numberInputs = document.querySelectorAll('input[type="number"], input#txAmount, input#invQty, input#modalOpeningCash, input#modalPhysicalCash, input#inputDailyOpeningCash');
     numberInputs.forEach(input => {
         input.setAttribute('type', 'text');
         input.setAttribute('inputmode', 'numeric');
@@ -51,7 +51,7 @@ function cleanNumber(value) {
 
 // Pengaturan Privasi & Proteksi Tampilan Berdasarkan Role Pengguna
 function applyRolePermissions() {
-    const isCashier = currentUserRole === 'cashier' || currentUserRole === 'cashier';
+    const isCashier = currentUserRole === 'cashier' || currentUserRole === 'kasir';
 
     // 1. Sembunyikan Card Pengeluaran & Net Profit dari Kasir
     const cardExpense = document.getElementById('cardExpense');
@@ -106,7 +106,7 @@ function switchTab(tabId) {
     }
 }
 
-// Ambil Data dari Firebase Firestore secara Online
+// Ambil Data dari Firebase Firestore secara Online (Real-time)
 function fetchDataFromFirebase() {
     if (typeof db === 'undefined' || !db) {
         console.warn("Database Firestore belum terinisialisasi. Menggunakan data lokal.");
@@ -127,6 +127,9 @@ function fetchDataFromFirebase() {
         const elDisplay = document.getElementById('openingCashDisplay');
         if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
 
+        const elAdminDisplay = document.getElementById('adminOpeningCashDisplay');
+        if (elAdminDisplay) elAdminDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
+
         updateDashboard();
     }, (error) => {
         console.error("Gagal mengambil data saldo awal: ", error);
@@ -139,12 +142,13 @@ function fetchDataFromFirebase() {
             transactions.push({ id: doc.id, ...doc.data() });
         });
         renderTransactions();
+        renderInventory(); // Update tabel stok otomatis berdasarkan transaksi bahan baku
         updateDashboard();
     }, (error) => {
         console.error("Gagal mengambil data transaksi: ", error);
     });
 
-    // 3. Ambil Data Stok / Inventory
+    // 3. Ambil Data Stok / Inventory tambahan
     db.collection("inventory").onSnapshot((snapshot) => {
         inventory = [];
         snapshot.forEach((doc) => {
@@ -337,9 +341,8 @@ function saveShiftClosing() {
     }
 
     const systemCashDrawer = openingCash + cashSales;
-    const totalSemuaKeuangan = physicalCash + bankSales; // Akumulasi Kas Fisik Laci + Rekening Bank/QRIS
+    const totalSemuaKeuangan = physicalCash + bankSales;
 
-    // Objek Data Rekonsiliasi Closing Shift
     const shiftClosingData = {
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         tanggal: new Date().toLocaleDateString('id-ID'),
@@ -353,7 +356,6 @@ function saveShiftClosing() {
         status: 'Closed'
     };
 
-    // Simpan Rekam Data Closing ke Firebase
     if (typeof db !== 'undefined' && db) {
         db.collection("shift_closings").add(shiftClosingData)
           .then(() => {
@@ -371,7 +373,64 @@ function saveShiftClosing() {
     }
 }
 
-// Manajemen Stok ke Firebase
+// Manajemen Stok Bahan Baku (Otomatis dari Transaksi Pembelian Bahan Baku)
+function renderInventory() {
+    const tbody = document.getElementById('inventoryTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    let stockMap = {};
+
+    // 1. Ambil data stok langsung dari koleksi inventory database (jika ada)
+    inventory.forEach(item => {
+        let nameKey = item.name.trim().toLowerCase();
+        stockMap[nameKey] = {
+            id: item.id,
+            name: item.name,
+            qty: Number(item.qty) || 0,
+            unit: item.unit || 'pcs'
+        };
+    });
+
+    // 2. Akumulasikan otomatis dari transaksi Pengeluaran Pembelian Bahan Baku
+    transactions.forEach(tx => {
+        if (tx.type === 'expense' && tx.category && tx.category.includes('Bahan Baku')) {
+            let itemName = tx.note || 'Bahan Baku (Pembelian)';
+            let nameKey = itemName.trim().toLowerCase();
+            
+            if (!stockMap[nameKey]) {
+                stockMap[nameKey] = {
+                    id: tx.id,
+                    name: itemName,
+                    qty: 1, 
+                    unit: 'porsi/pack'
+                };
+            }
+        }
+    });
+
+    // 3. Tampilkan ke dalam tabel
+    Object.keys(stockMap).forEach(key => {
+        let item = stockMap[key];
+        let statusText = item.qty > 5 ? 'Aman' : (item.qty > 0 ? 'Perhatian' : 'Habis');
+        let statusColor = item.qty > 5 ? '#27ae60' : (item.qty > 0 ? '#e67e22' : '#c0392b');
+
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${item.name}</strong></td>
+            <td>${item.qty}</td>
+            <td>${item.unit}</td>
+            <td><span style="color: ${statusColor}; font-weight:600;">${statusText}</span></td>
+            <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem;" onclick="restockItem('${item.id}', ${item.qty})">+ Tambah Stok</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    if (Object.keys(stockMap).length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Belum ada bahan baku yang dibeli. Catat transaksi pengeluaran bahan baku terlebih dahulu.</td></tr>`;
+    }
+}
+
 function saveInventory(e) {
     e.preventDefault();
     const name = document.getElementById('invName').value;
@@ -393,24 +452,6 @@ function saveInventory(e) {
     }
 }
 
-function renderInventory() {
-    const tbody = document.getElementById('inventoryTableBody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    inventory.forEach(item => {
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${item.name}</td>
-            <td>${item.qty}</td>
-            <td>${item.unit}</td>
-            <td><span style="color: ${item.status === 'Aman' ? '#27ae60' : '#e67e22'}; font-weight:600;">${item.status}</span></td>
-            <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem;" onclick="restockItem('${item.id}', ${item.qty})">+ Tambah Stok</button></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
 function restockItem(id, currentQty) {
     let add = prompt("Masukkan jumlah penambahan stok:", "5");
     if (add && typeof db !== 'undefined' && db) {
@@ -425,6 +466,29 @@ function restockItem(id, currentQty) {
         }).catch(err => {
             console.error("Gagal restock:", err);
         });
+    }
+}
+
+// Fungsi Admin menetapkan Uang Modal Laci Hari Ini (Open Shift)
+function setDailyOpeningCash(e) {
+    e.preventDefault();
+    const inputEl = document.getElementById('inputDailyOpeningCash');
+    const amount = cleanNumber(inputEl ? inputEl.value : 0);
+
+    if (typeof db !== 'undefined' && db) {
+        db.collection("settings").doc("shiftConfig").set({
+            openingCash: amount,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: 'Admin Mang Emong'
+        }).then(() => {
+            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!\nData langsung terupdate di dashboard kasir.");
+            if (inputEl) inputEl.value = '';
+        }).catch((err) => {
+            console.error("Gagal menyimpan modal laci:", err);
+            alert("Gagal menyimpan ke database.");
+        });
+    } else {
+        alert("Database Firestore belum terhubung!");
     }
 }
 
@@ -570,76 +634,4 @@ function toggleSidebar() {
     
     if (sidebar) sidebar.classList.toggle('active');
     if (overlay) overlay.classList.toggle('active');
-}
-// Fungsi Admin menetapkan Uang Modal Laci Hari Ini
-function setDailyOpeningCash(e) {
-    e.preventDefault();
-    const amount = cleanNumber(document.getElementById('inputDailyOpeningCash').value);
-
-    if (typeof db !== 'undefined' && db) {
-        db.collection("settings").doc("shiftConfig").set({
-            openingCash: amount,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: 'Admin Mang Emong'
-        }).then(() => {
-            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!\nData langsung terupdate di dashboard kasir.");
-            document.getElementById('inputDailyOpeningCash').value = '';
-        }).catch((err) => {
-            console.error("Gagal menyimpan modal laci:", err);
-            alert("Gagal menyimpan ke database.");
-        });
-    } else {
-        alert("Database Firestore belum terhubung!");
-    }
-}
-
-// Update penampil modal di dashboard admin secara realtime
-function fetchDataFromFirebase() {
-    if (typeof db === 'undefined' || !db) return;
-
-    // Mendengarkan perubahan modal laci secara realtime
-    db.collection("settings").doc("shiftConfig").onSnapshot((doc) => {
-        if (doc.exists && doc.data().openingCash !== undefined) {
-            openingCash = Number(doc.data().openingCash) || 0;
-        } else {
-            openingCash = 0;
-        }
-
-        const elAdminDisplay = document.getElementById('adminOpeningCashDisplay');
-        if (elAdminDisplay) elAdminDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
-
-        updateDashboard();
-    });
-
-    // Ambil data transaksi secara realtime
-    db.collection("transactions").orderBy("date", "desc").onSnapshot((snapshot) => {
-        transactions = [];
-        snapshot.forEach((doc) => {
-            transactions.push({ id: doc.id, ...doc.data() });
-        });
-        renderTransactions();
-        updateDashboard();
-    });
-}
-// Fungsi Admin menetapkan Uang Modal Laci Hari Ini
-function setDailyOpeningCash(e) {
-    e.preventDefault();
-    const inputEl = document.getElementById('inputDailyOpeningCash');
-    const amount = cleanNumber(inputEl ? inputEl.value : 0);
-
-    if (typeof db !== 'undefined' && db) {
-        db.collection("settings").doc("shiftConfig").set({
-            openingCash: amount,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: 'Admin Mang Emong'
-        }).then(() => {
-            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!\nData langsung terupdate di dashboard kasir.");
-            if (inputEl) inputEl.value = '';
-        }).catch((err) => {
-            console.error("Gagal menyimpan modal laci:", err);
-            alert("Gagal menyimpan ke database.");
-        });
-    } else {
-        alert("Database Firestore belum terhubung!");
-    }
 }
