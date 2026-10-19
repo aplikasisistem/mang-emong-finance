@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen Sistem Keuangan - Mang Emong Ramen House</title>
-  <link rel="apple-touch-icon" sizes="180x180" href="https://mangemong.netlify.app/img/logo.png">
-  <link rel="icon" type="image/png" href="https://mangemong.netlify.app/img/logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://mangemong.netlify.app/img/logo.png">
+    <link rel="icon" type="image/png" href="https://mangemong.netlify.app/img/logo.png">
     <!-- Google Fonts & FontAwesome -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -30,7 +30,7 @@
             <div class="user-profile">
                 <select id="userRoleSelect" onchange="switchRole()">
                     <option value="admin">Admin: Mang Emong</option>
-                    <option value="cashier">Kasir: Staf Ramen</option>
+                    <option value="cashier" selected>Kasir: Staf Ramen</option>
                 </select>
             </div>
         </div>
@@ -41,10 +41,10 @@
         <ul>
             <li class="active" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
             <li onclick="switchTab('transaction')"><i class="fa-solid fa-cash-register"></i> Transaksi & Kasir</li>
-            <li onclick="switchTab('inventory')"><i class="fa-solid fa-boxes-stacked"></i> Stok Bahan Baku</li>
-            <li onclick="switchTab('reports')"><i class="fa-solid fa-file-excel"></i> Laporan & Ekspor</li>
-            <li onclick="switchTab('users')"><i class="fa-solid fa-users-gear"></i> Manajemen Akun Kasir</li>
-            <li onclick="switchTab('settings')"><i class="fa-solid fa-gear"></i> Pengaturan API</li>
+            <li class="admin-only" onclick="switchTab('inventory')"><i class="fa-solid fa-boxes-stacked"></i> Stok Bahan Baku</li>
+            <li class="admin-only" onclick="switchTab('reports')"><i class="fa-solid fa-file-excel"></i> Laporan & Ekspor</li>
+            <li class="admin-only" onclick="switchTab('users')"><i class="fa-solid fa-users-gear"></i> Manajemen Akun Kasir</li>
+            <li class="admin-only" onclick="switchTab('settings')"><i class="fa-solid fa-gear"></i> Pengaturan API</li>
         </ul>
     </aside>
 
@@ -69,11 +69,11 @@
                     <h3>Total Pemasukan</h3>
                     <p id="totalIncome">Rp 0</p>
                 </div>
-                <div class="card expense">
+                <div class="card expense admin-only-card" id="cardExpense">
                     <h3>Total Pengeluaran (COGS + Operasional)</h3>
                     <p id="totalExpense">Rp 0</p>
                 </div>
-                <div class="card profit">
+                <div class="card profit admin-only-card" id="cardProfit">
                     <h3>Net Profit (Laba Bersih)</h3>
                     <p id="netProfit">Rp 0</p>
                 </div>
@@ -85,11 +85,13 @@
 
             <!-- Closing Shift Widget -->
             <div class="section-box mt-20">
-                <h3>Shift Kasir & Petty Cash</h3>
+                <h3>Shift Kasir & Closing</h3>
                 <div class="shift-box">
                     <div>
-                        <p>Saldo Awal (Opening Cash): <strong id="openingCashDisplay">Rp 0</strong></p>
+                        <p id="openingCashWrapper" class="admin-only-text">Saldo Awal (Opening Cash): <strong id="openingCashDisplay">Rp 0</strong></p>
                         <p>Total Penjualan Tunai: <strong id="shiftCashSales">Rp 0</strong></p>
+                        <p>Total Penjualan Non-Tunai (Bank/QRIS): <strong id="shiftBankSales">Rp 0</strong></p>
+                        <p style="font-size: 1.1rem; color: #27ae60;">Total Penjualan Shift: <strong id="shiftTotalSales">Rp 0</strong></p>
                     </div>
                     <div>
                         <button class="btn btn-primary" onclick="openShiftModal()">Kelola Shift / Closing</button>
@@ -121,7 +123,7 @@
                             <label>Jenis Transaksi</label>
                             <select id="txType" onchange="updateCategoryOptions()" required>
                                 <option value="income">Pemasukan (Income)</option>
-                                <option value="expense">Pengeluaran (Expense)</option>
+                                <option value="expense" class="admin-only-option">Pengeluaran (Expense)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -231,7 +233,7 @@
             </div>
         </section>
 
-        <!-- USERS MANAGEMENT TAB (FITUR BARU PENAMBAHAN AKUN KASIR) -->
+        <!-- USERS MANAGEMENT TAB -->
         <section id="tab-users" class="tab-content">
             <h2>Manajemen Akun Kasir & Pengelola</h2>
             <div class="section-box">
@@ -256,8 +258,8 @@
                         <div class="form-group">
                             <label>Hak Akses (Role)</label>
                             <select id="newRole">
-                                <option value="kasir">Kasir (Hanya Input Pendapatan)</option>
-                                <option value="pemilik">Pemilik / Admin (Akses Penuh)</option>
+                                <option value="cashier">Kasir (Hanya Input Pendapatan)</option>
+                                <option value="admin">Pemilik / Admin (Akses Penuh)</option>
                             </select>
                         </div>
                     </div>
@@ -307,13 +309,16 @@
     <div id="shiftModal" class="modal">
         <div class="modal-content">
             <h3>Kelola Shift Kasir (Closing Cash)</h3>
-            <div class="form-group">
+            <div class="form-group admin-only-field" id="modalOpeningCashGroup">
                 <label>Saldo Modal Awal (Opening Petty Cash):</label>
                 <input type="text" id="modalOpeningCash" inputmode="numeric" value="0">
             </div>
             <div class="form-group">
                 <label>Total Hitung Fisik Kas di Laci:</label>
                 <input type="text" id="modalPhysicalCash" inputmode="numeric" placeholder="Hitung uang fisik di laci">
+            </div>
+            <div class="shift-summary-box" style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-top: 10px;">
+                <p>Total Penjualan Non-Tunai (Bank / QRIS): <strong id="modalBankSummary">Rp 0</strong></p>
             </div>
             <div class="modal-buttons mt-20">
                 <button class="btn btn-success" onclick="saveShiftClosing()">Simpan Closing</button>
@@ -325,6 +330,9 @@
     <!-- Firebase SDK Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
     <!-- SheetJS & jsPDF for Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -332,6 +340,7 @@
     <!-- App Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/app.js"></script>
+    
     <!-- Sidebar Overlay untuk Mobile -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 </body>
