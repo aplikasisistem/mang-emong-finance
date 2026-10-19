@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MANG EMOS FINANCE - Login</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Firebase SDK Compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-slate-900 font-sans text-slate-100 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30">
+        <span class="text-3xl font-extrabold text-white">🍜</span>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-white">MANG EMOS FINANCE</h1>
+      <p class="text-slate-400 text-sm mt-1">Sistem Manajemen Keuangan Resto & Kasir</p>
+    </div>
+
+    <form id="loginForm" class="space-y-5">
+      <div>
+        <label class="block text-sm font-semibold mb-2 text-slate-300">UID / Email Login</label>
+        <input type="text" id="loginInput" required placeholder="Masukkan Email / Owner UID" 
+          class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold mb-2 text-slate-300">Password</label>
+        <input type="password" id="passwordInput" placeholder="Password (Kosongkan jika pakai UID Owner)" 
+          class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold mb-2 text-slate-300">Mode Akses Masuk</label>
+        <select id="roleSelect" class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+          <option value="admin">Admin / Pemilik (Full Akses)</option>
+          <option value="kasir">Kasir (Akses Terbatas)</option>
+        </select>
+      </div>
+
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition duration-200">
+        Masuk ke Sistem
+      </button>
+    </form>
+
+    <div id="loginAlert" class="mt-4 p-3 rounded-xl text-sm font-medium hidden"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
