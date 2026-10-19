@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
- <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MANG EMOS FINANCE - Admin Dashboard</title>
@@ -16,29 +15,17 @@
       theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
     }
   </script>
-
-  <!-- Firebase SDK Compat Lengkap (App, Auth, Firestore, & Realtime Database) -->
+  <!-- Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
-  <!-- XLSX & PDF Libs (Khusus Dashboard Admin) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-</head>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <!-- XLSX & PDF Libs -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-slate-900 font-sans text-slate-100 min-h-screen pb-16">
-  <!-- Header -->
   <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-2xl">👑</span>
@@ -49,12 +36,10 @@
     </div>
     
     <div class="flex items-center gap-3">
-      <!-- Voice Command AI -->
       <button onclick="startVoiceInput()" id="micBtn" class="bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2 rounded-xl flex items-center gap-2 border border-slate-600 text-xs font-semibold">
         <span id="micIcon">🎙️</span> AI Suara
       </button>
 
-      <!-- Navigasi Switch -->
       <a href="kasir.html" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-3.5 py-2 rounded-xl font-semibold">
         Mode Kasir
       </a>
@@ -66,7 +51,6 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 mt-6 space-y-6">
-    <!-- Database Direct Links -->
     <div class="flex flex-wrap gap-3">
       <a href="https://console.firebase.google.com" target="_blank" class="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-amber-500/20 transition">
         <span>🔥</span> Buka Firebase Console
@@ -76,7 +60,6 @@
       </a>
     </div>
 
-    <!-- Modal/Form Tambah Akun Kasir -->
     <section class="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-xl">
       <h2 class="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
         <span>👤</span> Tambahkan Akun Kasir Baru
@@ -90,7 +73,6 @@
       </form>
     </section>
 
-    <!-- Modul Input Pengeluaran -->
     <section class="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-xl">
       <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
         <span>💸</span> Input Pengeluaran (Harian / Mingguan / Bulanan)
@@ -133,7 +115,6 @@
       </form>
     </section>
 
-    <!-- Ringkasan Filter & Cards -->
     <section class="space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <h2 class="text-xl font-bold text-white">📈 Rekapan & Laporan Keuangan</h2>
@@ -149,7 +130,6 @@
         </div>
       </div>
 
-      <!-- Card Statistics -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700">
           <p class="text-xs text-slate-400 font-medium">Pemasukan Tunai (Laci)</p>
@@ -170,7 +150,6 @@
       </div>
     </section>
 
-    <!-- Export & Tabel Detail -->
     <section class="bg-slate-800 rounded-2xl border border-slate-700 shadow-xl overflow-hidden">
       <div class="p-4 border-b border-slate-700 flex flex-wrap justify-between items-center gap-3">
         <h3 class="font-bold text-white text-sm">Riwayat Transaksi & Log Audit</h3>
