@@ -57,15 +57,15 @@ if (loginForm) {
       alertBox.className = "mt-4 p-3 rounded-xl text-sm font-medium hidden";
     }
 
-    // A. BISA LOGIN LANGSUNG MENGGUNAKAN UID OWNER ATAU EMAIL OWNER
+    // A. BYPASS OWNER UID ATAU EMAIL (Pasti Masuk)
     if (input === OWNER_UID || input.toLowerCase() === "firman@ramenhouse.com" || input.includes("NfOuYEiGp")) {
-      localStorage.setItem('userRole', role);
+      localStorage.setItem('userRole', 'admin'); // Paksa jadi admin agar aman
       localStorage.setItem('userUID', OWNER_UID);
-      window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
+      window.location.href = 'dashboard.html';
       return;
     }
 
-    // B. JIKA LOGIN MENGGUNAKAN EMAIL LAIN VIA FIREBASE AUTH
+    // B. JIKA LOGIN MENGGUNAKAN AKUN KASIR VIA FIREBASE AUTH
     try {
       if (typeof firebase !== 'undefined' && firebase.auth) {
         const userCred = await firebase.auth().signInWithEmailAndPassword(input, password);
@@ -73,7 +73,6 @@ if (loginForm) {
         localStorage.setItem('userUID', userCred.user.uid);
         window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
       } else {
-        // Fallback jika SDK offline
         localStorage.setItem('userRole', role);
         window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
       }
@@ -86,19 +85,6 @@ if (loginForm) {
     }
   });
 }
-
-function logout() {
-  localStorage.removeItem('userRole');
-  localStorage.removeItem('userUID');
-  if (typeof firebase !== 'undefined' && firebase.auth) {
-    firebase.auth().signOut().finally(() => {
-      window.location.href = 'index.html';
-    });
-  } else {
-    window.location.href = 'index.html';
-  }
-}
-
 // 3. Dual-Sync Push Data
 async function pushTransaction(trx) {
   const local = getLocalData();
