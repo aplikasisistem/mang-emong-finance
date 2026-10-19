@@ -1,4 +1,4 @@
-// Konfigurasi Firebase untuk Mang Emong Ramen Finance
+// Konfigurasi Firebase untuk Mang Emong Ramen Finance[cite: 1]
 const firebaseConfig = {
     apiKey: "AIzaSyB7-sRsDabjN9ypOVyJwhdA7jNczWIhoiQ",
     authDomain: "manajemen-keuangan-mang-emong.firebaseapp.com",
@@ -10,21 +10,21 @@ const firebaseConfig = {
     measurementId: "G-JTPDTWHRQW"
 };
 
-// Inisialisasi Firebase Realtime DB & Firestore (Compat)
+// Inisialisasi Firebase Realtime DB & Firestore (Compat)[cite: 1]
 let dbRealtime = null;
 let dbFirestore = null;
 
 try {
     firebase.initializeApp(firebaseConfig);
-    dbRealtime = firebase.database(); // Integrasi ke Realtime DB
-    dbFirestore = firebase.firestore(); // Firestore fallback
+    dbRealtime = firebase.database();
+    dbFirestore = firebase.firestore();
     console.log("Firebase terhubung ke project: manajemen-keuangan-mang-emong!");
 } catch (e) {
     console.error("Gagal menginisialisasi Firebase:", e);
 }
 
 // Global Application State
-let currentUser = null; // { uid, role, nama, email }[cite: 1]
+let currentUser = null; 
 let transactions = [];
 let currentShiftCash = 0;
 let googleSheetsWebhookUrl = localStorage.getItem("mang_emos_gsheet_url") || "";
@@ -38,43 +38,52 @@ document.addEventListener("DOMContentLoaded", () => {
 // --- AUTHENTICATION & ROLE MANAGEMENT ---
 
 function loginUser() {
-    const uid = document.getElementById("userUidInput").value.trim();
-    if (!uid) return alert("Silahkan masukkan UID!");
+    const inputVal = document.getElementById("userUidInput").value.trim();
+    if (!inputVal) return alert("Silahkan masukkan UID atau Email!");
 
-    // Cek akun pemilik utama berdasarkan database Realtime DB (users/UID)[cite: 1]
+    // Auto-detect untuk UID / Email Owner Utama[cite: 1]
+    if (inputVal === "NfOuYEiGp9Py2uSxuuqN3llGZUI2" || inputVal.toLowerCase() === "firman@ramenhouse.com") {
+        currentUser = {
+            uid: "NfOuYEiGp9Py2uSxuuqN3llGZUI2",
+            role: "admin",
+            nama: "firman",
+            email: "firman@ramenhouse.com"
+        };
+        saveSessionAndProceed();
+        return;
+    }
+
+    // Pengecekan via Realtime Database Firebase jika bukan owner utama[cite: 1]
     if (dbRealtime) {
-        dbRealtime.ref("users/" + uid).once("value").then((snapshot) => {
+        dbRealtime.ref("users/" + inputVal).once("value").then((snapshot) => {
             if (snapshot.exists()) {
                 const userData = snapshot.val();
                 currentUser = {
-                    uid: uid,
+                    uid: inputVal,
                     role: userData.role || "kasir",
                     nama: userData.nama || "User",
                     email: userData.email || ""
                 };
                 saveSessionAndProceed();
             } else {
-                // Default Kasir jika UID tidak terdaftar secara eksplisit
-                currentUser = { uid: uid, role: "kasir", nama: "Kasir Laci", email: "" };
+                // Login Kasir Publik Fallback
+                currentUser = {
+                    uid: inputVal,
+                    role: "kasir",
+                    nama: inputVal,
+                    email: ""
+                };
                 saveSessionAndProceed();
             }
         }).catch((err) => {
-            console.warn("Realtime DB check failed, using fallback mode", err);
-            fallbackLogin(uid);
+            console.warn("Gagal terhubung ke Firebase, menggunakan sesi lokal:", err);
+            currentUser = { uid: inputVal, role: "kasir", nama: inputVal, email: "" };
+            saveSessionAndProceed();
         });
     } else {
-        fallbackLogin(uid);
+        currentUser = { uid: inputVal, role: "kasir", nama: inputVal, email: "" };
+        saveSessionAndProceed();
     }
-}
-
-function fallbackLogin(uid) {
-    // Check owner hardcoded fallback UID[cite: 1]
-    if (uid === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
-        currentUser = { uid: uid, role: "admin", nama: "firman", email: "firman@ramenhouse.com" };
-    } else {
-        currentUser = { uid: uid, role: "kasir", nama: "Kasir Laci", email: "" };
-    }
-    saveSessionAndProceed();
 }
 
 function saveSessionAndProceed() {
@@ -105,9 +114,8 @@ function toggleRole() {
     if (currentUser.role === "admin") {
         currentUser.role = "kasir";
     } else {
-        // Minta konfirmasi jika switch ke Admin
         const uid = prompt("Masukkan Passcode / UID Admin:");
-        if (uid === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") { // Match dengan UID di Firebase[cite: 1]
+        if (uid === "NfOuYEiGp9Py2uSxuuqN3llGZUI2" || uid === "firman@ramenhouse.com") {[cite: 1]
             currentUser.role = "admin";
         } else {
             return alert("Akses Admin Ditolak!");
@@ -184,19 +192,15 @@ function handleExpenseSubmit(e) {
 }
 
 function saveTransaction(item) {
-    // 1. Simpan Lokal Browser[cite: 1]
     transactions.unshift(item);
     localStorage.setItem("mang_emos_trans", JSON.stringify(transactions));
     localStorage.setItem("mang_emos_shift_cash", currentShiftCash.toString());
 
-    // 2. Simpan Firebase Realtime Database[cite: 1]
     if (dbRealtime) {
         dbRealtime.ref("transactions/" + item.id).set(item);
     }
 
-    // 3. Kirim ke Webhook Google Sheets[cite: 1]
     sendToGoogleSheets(item);
-
     renderDashboard();
 }
 
@@ -221,11 +225,10 @@ function loadLocalData() {
 }
 
 function recalculateCurrentShiftCash() {
-    // Hitung akumulasi cash tunai yang belum di-closing
     let cash = 0;
     transactions.forEach(t => {
         if (t.type === "pemasukan" && t.method === "Tunai (Cash)") cash += t.amount;
-        if (t.type === "closing") cash = 0; // Reset point
+        if (t.type === "closing") cash = 0; 
     });
     currentShiftCash = cash;
 }
@@ -278,7 +281,7 @@ function processClosingShift() {
         user: currentUser.nama
     };
 
-    currentShiftCash = 0; // Reset kas tunai[cite: 1]
+    currentShiftCash = 0; 
     document.getElementById("physicalCashInput").value = "";
     document.getElementById("varianceResultBox").classList.add("hidden");
 
@@ -315,12 +318,11 @@ function startVoiceInput() {
 }
 
 function parseVoiceCommand(text) {
-    // Contoh kalimat: "Beli bahan baku lima puluh ribu keterangan beli telur"
-    const numberMatch = text.match(/\d+/g) || parseIndonesianNumbers(text);
+    const numberMatch = text.match(/\d+/g);
     let amount = 0;
     
     if (numberMatch) {
-        amount = typeof numberMatch === 'number' ? numberMatch : parseInt(numberMatch.join(''));
+        amount = parseInt(numberMatch.join(''));
     }
 
     if (amount > 0) {
@@ -330,16 +332,6 @@ function parseVoiceCommand(text) {
     } else {
         alert("Sistem tidak menemukan angka nominal pada perintah suara: " + text);
     }
-}
-
-function parseIndonesianNumbers(text) {
-    if (text.includes("ribu")) {
-        const parts = text.split("ribu")[0].trim().split(" ");
-        const lastWord = parts[parts.length - 1];
-        const map = { "satu": 1, "dua": 2, "tiga": 3, "empat": 4, "lima": 5, "enam": 6, "tujuh": 7, "delapan": 8, "sembilan": 9, "sepuluh": 10, "lima puluh": 50, "seratus": 100 };
-        return (map[lastWord] || 10) * 1000;
-    }
-    return 0;
 }
 
 // --- GOOGLE SHEETS DUAL-SYNC ---
