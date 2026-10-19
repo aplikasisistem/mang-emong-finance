@@ -66,16 +66,12 @@
 
             <div class="cards-grid">
                 <div class="card income">
-                    <h3>Total Pemasukan</h3>
+                    <h3>Pemasukan Hari Ini</h3>
                     <p id="totalIncome">Rp 0</p>
                 </div>
                 <div class="card expense admin-only-card" id="cardExpense">
-                    <h3>Total Pengeluaran (COGS + Operasional)</h3>
-                    <p id="totalExpense">Rp 0</p>
-                </div>
-                <div class="card profit admin-only-card" id="cardProfit">
-                    <h3>Net Profit (Laba Bersih)</h3>
-                    <p id="netProfit">Rp 0</p>
+                    <h3>Produk Terjual Hari Ini</h3>
+                    <p id="totalProductsSold" style="font-size: 1.5rem; font-weight: 700;">0 Produk</p>
                 </div>
                 <div class="card cashdrawer">
                     <h3>Kas di Laci (Cash Drawer)</h3>
@@ -88,13 +84,13 @@
                 <h3>Shift Kasir & Closing</h3>
                 <div class="shift-box">
                     <div>
-                        <p id="openingCashWrapper" class="admin-only-text">Saldo Awal (Opening Cash): <strong id="openingCashDisplay">Rp 0</strong></p>
+                        <p id="openingCashWrapper" class="admin-only-text">Modal Awal Laci (Set Pemilik): <strong id="openingCashDisplay">Rp 0</strong></p>
                         <p>Total Penjualan Tunai: <strong id="shiftCashSales">Rp 0</strong></p>
                         <p>Total Penjualan Non-Tunai (Bank/QRIS): <strong id="shiftBankSales">Rp 0</strong></p>
                         <p style="font-size: 1.1rem; color: #27ae60;">Total Penjualan Shift: <strong id="shiftTotalSales">Rp 0</strong></p>
                     </div>
                     <div>
-                        <button class="btn btn-primary" onclick="openShiftModal()">Kelola Shift / Closing</button>
+                        <button class="btn btn-primary" onclick="openShiftModal()">Closing Shift & Reset ke 0</button>
                     </div>
                 </div>
             </div>
@@ -123,11 +119,11 @@
                             <label>Jenis Transaksi</label>
                             <select id="txType" onchange="updateCategoryOptions()" required>
                                 <option value="income">Pemasukan (Income)</option>
-                                <option value="expense" class="admin-only-option">Pengeluaran (Expense)</option>
+                                <option value="expense" class="admin-only-option">Pengeluaran / Produk Terjual (Expense)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Kategori</label>
+                            <label>Kategori / Produk</label>
                             <select id="txCategory" required>
                                 <!-- Populated dynamically -->
                             </select>
@@ -135,8 +131,8 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Jumlah (Rp)</label>
-                            <input type="text" id="txAmount" inputmode="numeric" placeholder="Contoh: 150.000" required>
+                            <label>Jumlah (Rp / Qty Produk)</label>
+                            <input type="text" id="txAmount" inputmode="numeric" placeholder="Contoh: 500.000 atau jumlah produk laku" required>
                         </div>
                         <div class="form-group">
                             <label>Metode Pembayaran</label>
@@ -149,7 +145,7 @@
                     </div>
                     <div class="form-group">
                         <label>Keterangan / Catatan</label>
-                        <input type="text" id="txNote" placeholder="Contoh: Pembelian stok daging sapi 2 kg">
+                        <input type="text" id="txNote" placeholder="Contoh: Terjual 50 mangkok mie ramen & 50 botol air mineral">
                     </div>
                     <button type="submit" class="btn btn-success">Simpan Transaksi</button>
                 </form>
@@ -227,7 +223,7 @@
             <!-- Setup Modal Awal Laci Hari Ini (Open Shift) -->
             <div class="section-box">
                 <h3><i class="fa-solid fa-coins"></i> Setup Modal Awal Laci Hari Ini (Open Shift)</h3>
-                <p>Masukkan nominal uang fisik/kembalian yang diberikan kepada kasir untuk operasional hari ini.</p>
+                <p>Masukkan nominal uang fisik/kembalian yang diberikan oleh pemilik kepada kasir untuk operasional hari ini.</p>
                 <form onsubmit="setDailyOpeningCash(event)" style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
                     <div class="form-group" style="margin-bottom: 0; flex: 1;">
                         <input type="text" id="inputDailyOpeningCash" inputmode="numeric" placeholder="Contoh: 500.000" required>
@@ -325,9 +321,10 @@
     <!-- Closing Shift Modal -->
     <div id="shiftModal" class="modal">
         <div class="modal-content">
-            <h3>Kelola Shift Kasir (Closing Cash)</h3>
+            <h3>Kelola Closing Shift Kasir</h3>
+            <p>Melakukan closing akan mereset hitungan shift kasir kembali menjadi 0.</p>
             <div class="form-group admin-only-field" id="modalOpeningCashGroup">
-                <label>Saldo Modal Awal (Opening Petty Cash):</label>
+                <label>Modal Kasir Awal (Set Pemilik):</label>
                 <input type="text" id="modalOpeningCash" inputmode="numeric" value="0">
             </div>
             <div class="form-group">
@@ -338,7 +335,7 @@
                 <p>Total Penjualan Non-Tunai (Bank / QRIS): <strong id="modalBankSummary">Rp 0</strong></p>
             </div>
             <div class="modal-buttons mt-20">
-                <button class="btn btn-success" onclick="saveShiftClosing()">Simpan Closing</button>
+                <button class="btn btn-success" onclick="saveShiftClosing()">Simpan Closing & Reset</button>
                 <button class="btn btn-danger" onclick="closeShiftModal()">Tutup</button>
             </div>
         </div>
