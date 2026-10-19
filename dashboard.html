@@ -340,7 +340,20 @@
     <!-- App Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/app.js"></script>
-    
+    <!-- Widget Setup Modal Awal untuk Admin -->
+<div class="section-box mt-20">
+    <h3><i class="fa-solid fa-coins"></i> Setup Modal Awal Laci Hari Ini (Open Shift)</h3>
+    <p>Masukkan nominal uang fisik/kembalian yang diberikan kepada kasir untuk operasional hari ini.</p>
+    <form onsubmit="setDailyOpeningCash(event)" style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+        <div class="form-group" style="margin-bottom: 0; flex: 1;">
+            <input type="text" id="inputDailyOpeningCash" inputmode="numeric" placeholder="Contoh: 500.000" required>
+        </div>
+        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Simpan Modal Laci</button>
+    </form>
+    <p style="margin-top: 10px; font-size: 0.9rem; color: #555;">
+        Modal Laci Aktif Hari Ini: <strong id="adminOpeningCashDisplay" style="color: #27ae60;">Rp 0</strong>
+    </p>
+</div>
     <!-- Sidebar Overlay untuk Mobile -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 </body>
