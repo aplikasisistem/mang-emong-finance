@@ -29,17 +29,27 @@ try {
   console.error("Gagal Inisialisasi Firebase:", e);
 }
 
-// LocalStorage Helpers
-function getLocalData() {
-  return JSON.parse(localStorage.getItem('mang_emos_transactions') || '[]');
+// Contoh Realtime Listener Firestore untuk Dashboard Admin
+function listenRealtimeTransactions() {
+  if (db && document.getElementById('transactionTableBody')) {
+    db.collection('transactions').orderBy('timestamp', 'desc').onSnapshot((snapshot) => {
+      let liveData = [];
+      snapshot.forEach((doc) => {
+        liveData.push(doc.data());
+      });
+      // Simpan ke local storage agar sinkron
+      saveLocalData(liveData);
+      // Render ulang dashboard secara realtime
+      renderDashboard();
+    }, (err) => {
+      console.warn("Gagal mendengarkan realtime Firestore, menggunakan LocalStorage:", err);
+    });
+  }
 }
 
-function saveLocalData(data) {
-  localStorage.setItem('mang_emos_transactions', JSON.stringify(data));
-}
-
-function formatRp(num) {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+// Panggil fungsi ini di bagian bawah app.js jika berada di halaman dashboard
+if (document.getElementById('transactionTableBody')) {
+  listenRealtimeTransactions();
 }
 
 // 2. Auth & Login Logic (Bypass UID & Direct Auth)
