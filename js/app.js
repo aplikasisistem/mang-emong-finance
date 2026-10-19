@@ -175,14 +175,21 @@ function updateCategoryOptions() {
     });
 }
 
-// Simpan Transaksi ke Firebase Online
+// Simpan Transaksi ke Firebase Online (Dilengkapi Pengecekan Keamanan)
 function saveTransaction(e) {
     e.preventDefault();
-    const type = document.getElementById('txType').value;
-    const category = document.getElementById('txCategory').value;
-    const amount = cleanNumber(document.getElementById('txAmount').value);
-    const qty = cleanNumber(document.getElementById('txQty').value);
-    const note = document.getElementById('txNote').value;
+    
+    const typeEl = document.getElementById('txType');
+    const categoryEl = document.getElementById('txCategory');
+    const amountEl = document.getElementById('txAmount');
+    const qtyEl = document.getElementById('txQty');
+    const noteEl = document.getElementById('txNote');
+
+    const type = typeEl ? typeEl.value : 'income';
+    const category = categoryEl ? categoryEl.value : 'Mie';
+    const amount = amountEl ? cleanNumber(amountEl.value) : 0;
+    const qty = qtyEl ? cleanNumber(qtyEl.value) : 0;
+    const note = noteEl ? noteEl.value : '';
 
     const newTx = {
         date: new Date().toISOString().split('T')[0],
@@ -203,10 +210,10 @@ function saveTransaction(e) {
           })
           .catch((error) => {
               console.error("Gagal menyimpan transaksi: ", error);
-              alert("Gagal menyimpan ke database online.");
+              alert("Gagal menyimpan ke database online: " + error.message);
           });
     } else {
-        alert("Database belum terhubung!");
+        alert("Database Firestore belum terhubung! Periksa koneksi atau konfigurasi Firebase Anda.");
     }
 }
 
@@ -262,7 +269,7 @@ function updateDashboard() {
         let qty = Number(tx.qty) || 0;
         if (tx.type === 'income') {
             totalInc += amt;
-            totalPcsSold += qty; // Akumulasi pcs produk terjual
+            totalPcsSold += qty;
             if (tx.payment === 'Cash') {
                 cashSales += amt;
             } else {
