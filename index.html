@@ -1,302 +1,205 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Sistem Keuangan - Mang Emong Ramen House</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Mang Emong Ramen Finance</title>
   <link rel="apple-touch-icon" sizes="180x180" href="https://mangemong.netlify.app/img/logo.png">
   <link rel="icon" type="image/png" href="https://mangemong.netlify.app/img/logo.png">
-    <!-- Google Fonts & FontAwesome -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Google Fonts & FontAwesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .login-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .login-header img {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 12px;
+      border: 2px solid #38bdf8;
+    }
+    .login-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #f8fafc;
+    }
+    .login-header p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      text-align: left;
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      font-size: 14px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px 10px 36px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f8fafc;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      border-color: #38bdf8;
+    }
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background: #0284c7;
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+    .btn-login:hover {
+      background: #0369a1;
+    }
+    .btn-login:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+    .error-msg {
+      color: #f87171;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+  </style>
+
+  <!-- Firebase SDK (Compat Version) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-    <!-- Top Navbar -->
-    <header class="navbar">
-        <div class="nav-brand">
-            <!-- Tombol Hamburger untuk Mobile -->
-            <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
-                <i class="fa-solid fa-bars"></i>
-            </button>
-            <img src="./img/logo.jpg" alt="Logo" class="app-logo">
-            <span>Mang Emong Ramen Finance</span>
+
+  <div class="login-card">
+    <div class="login-header">
+      <img src="./img/logo.jpg" alt="Logo Mang Emong">
+      <h2>Mang Emong Finance</h2>
+      <p>Masuk ke sistem keuangan & kasir</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="email" placeholder="nama@ramenhouse.com" required>
         </div>
-        <div class="nav-right">
-            <div class="sync-status" id="syncStatus">
-                <i class="fa-solid fa-cloud-arrow-up"></i> <span>Synced with Firebase</span>
-            </div>
-            <div class="user-profile">
-                <select id="userRoleSelect" onchange="switchRole()">
-                    <option value="admin">Admin: Mang Emong</option>
-                    <option value="cashier">Kasir: Staf Ramen</option>
-                </select>
-            </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Kata Sandi</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="password" placeholder="••••••••" required>
         </div>
-    </header>
+      </div>
 
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar">
-        <ul>
-            <li class="active" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
-            <li onclick="switchTab('transaction')"><i class="fa-solid fa-cash-register"></i> Transaksi & Kasir</li>
-            <li onclick="switchTab('inventory')"><i class="fa-solid fa-boxes-stacked"></i> Stok Bahan Baku</li>
-            <li onclick="switchTab('reports')"><i class="fa-solid fa-file-excel"></i> Laporan & Ekspor</li>
-            <li onclick="switchTab('settings')"><i class="fa-solid fa-gear"></i> Pengaturan API</li>
-        </ul>
-    </aside>
+      <button type="submit" id="btnLogin" class="btn-login">Masuk ke Sistem</button>
+      <p id="errorMsg" class="error-msg"></p>
+    </form>
+  </div>
 
-    <!-- Main Content Area -->
-    <main class="main-content">
-        
-        <!-- DASHBOARD TAB -->
-        <section id="tab-dashboard" class="tab-content active">
-            <h2>Dashboard Keuangan Ramen House</h2>
-            <div class="filter-bar">
-                <label>Periode: </label>
-                <select id="periodFilter" onchange="updateDashboard()">
-                    <option value="today">Hari Ini</option>
-                    <option value="week">Minggu Ini</option>
-                    <option value="month" selected>Bulan Ini</option>
-                    <option value="year">Tahun Ini</option>
-                </select>
-            </div>
+  <!-- Script Konfigurasi & Logika Login Firebase -->
+  <script src="js/firebase-config.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
 
-            <div class="cards-grid">
-                <div class="card income">
-                    <h3>Total Pemasukan</h3>
-                    <p id="totalIncome">Rp 0</p>
-                </div>
-                <div class="card expense">
-                    <h3>Total Pengeluaran (COGS + Operasional)</h3>
-                    <p id="totalExpense">Rp 0</p>
-                </div>
-                <div class="card profit">
-                    <h3>Net Profit (Laba Bersih)</h3>
-                    <p id="netProfit">Rp 0</p>
-                </div>
-                <div class="card cashdrawer">
-                    <h3>Kas di Laci (Cash Drawer)</h3>
-                    <p id="drawerCash">Rp 0</p>
-                </div>
-            </div>
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const btnLogin = document.getElementById('btnLogin');
+      const errorMsg = document.getElementById('errorMsg');
 
-            <!-- Closing Shift Widget -->
-            <div class="section-box mt-20">
-                <h3>Shift Kasir & Petty Cash</h3>
-                <div class="shift-box">
-                    <div>
-                        <p>Saldo Awal (Opening Cash): <strong id="openingCashDisplay">Rp 0</strong></p>
-                        <p>Total Penjualan Tunai: <strong id="shiftCashSales">Rp 0</strong></p>
-                    </div>
-                    <div>
-                        <button class="btn btn-primary" onclick="openShiftModal()">Kelola Shift / Closing</button>
-                    </div>
-                </div>
-            </div>
-        </section>
+      errorMsg.style.display = 'none';
+      btnLogin.disabled = true;
+      btnLogin.innerText = 'Memverifikasi...';
 
-        <!-- TRANSACTION & AI VOICE TAB -->
-        <section id="tab-transaction" class="tab-content">
-            <h2>Pencatatan Transaksi & AI Voice Assistant</h2>
+      // 1. Authenticate user dengan Firebase Auth
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const uid = userCredential.user.uid;
+
+          // 2. Ambil data role dari Realtime Database
+          return firebase.database().ref('users/' + uid).once('value');
+        })
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const userData = snapshot.val();
             
-            <!-- AI Voice Input Section -->
-            <div class="ai-voice-box">
-                <h3><i class="fa-solid fa-microphone-lines"></i> AI Voice Command Simulator</h3>
-                <p>Contoh: "Catat pengeluaran beli mi 200 ribu untuk bahan baku" atau "Catat pemasukan dine in 450 ribu tunai"</p>
-                <div class="voice-controls">
-                    <input type="text" id="voiceInputText" placeholder="Ketik atau simulasikan perintah suara...">
-                    <button class="btn btn-voice" onclick="processVoiceCommand()"><i class="fa-solid fa-microphone"></i> Proses AI</button>
-                </div>
-            </div>
+            // Simpan role di localStorage agar bisa dibaca di dashboard
+            localStorage.setItem('userRole', userData.role || 'kasir');
+            localStorage.setItem('userName', userData.nama || 'User');
 
-            <!-- Manual Transaction Form -->
-            <div class="section-box mt-20">
-                <h3>Input Transaksi Manual</h3>
-                <form id="transactionForm" onsubmit="saveTransaction(event)">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Jenis Transaksi</label>
-                            <select id="txType" onchange="updateCategoryOptions()" required>
-                                <option value="income">Pemasukan (Income)</option>
-                                <option value="expense">Pengeluaran (Expense)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Kategori</label>
-                            <select id="txCategory" required>
-                                <!-- Populated dynamically -->
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Jumlah (Rp)</label>
-                            <input type="text" id="txAmount" inputmode="numeric" placeholder="Contoh: 150.000" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Metode Pembayaran</label>
-                            <select id="txPayment">
-                                <option value="Cash">Tunai (Cash)</option>
-                                <option value="QRIS">Non-Tunai (QRIS / EDC)</option>
-                                <option value="Transfer">Transfer Bank</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Keterangan / Catatan</label>
-                        <input type="text" id="txNote" placeholder="Contoh: Pembelian stok daging sapi 2 kg">
-                    </div>
-                    <button type="submit" class="btn btn-success">Simpan Transaksi</button>
-                </form>
-            </div>
-
-            <!-- Transaction Table -->
-            <div class="section-box mt-20">
-                <h3>Riwayat Transaksi Terbaru</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Jenis</th>
-                            <th>Kategori</th>
-                            <th>Keterangan</th>
-                            <th>Metode</th>
-                            <th>Jumlah</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionTableBody">
-                        <!-- Filled by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- INVENTORY TAB -->
-        <section id="tab-inventory" class="tab-content">
-            <h2>Manajemen Stok Bahan Baku Ramen</h2>
-            <div class="section-box">
-                <h3>Tambah / Update Stok Bahan</h3>
-                <form id="inventoryForm" onsubmit="saveInventory(event)">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Nama Bahan Baku</label>
-                            <input type="text" id="invName" placeholder="Contoh: Mi Ramen, Kaldu Ayam, Daging Sapi" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Jumlah Stok</label>
-                            <input type="text" id="invQty" inputmode="numeric" placeholder="Contoh: 10" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Satuan</label>
-                            <input type="text" id="invUnit" placeholder="kg / pack / liter" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Simpan Stok</button>
-                </form>
-            </div>
-
-            <div class="section-box mt-20">
-                <h3>Daftar Stok Saat Ini</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Nama Bahan</th>
-                            <th>Stok Tersedia</th>
-                            <th>Satuan</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventoryTableBody">
-                        <!-- Filled by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- REPORTS TAB -->
-        <section id="tab-reports" class="tab-content">
-            <h2>Laporan Keuangan & Ekspor Data</h2>
-            <div class="section-box">
-                <h3>Cetak Laporan Ramen House</h3>
-                <p>Sesuaikan kop surat, logo, dan unduh laporan dalam format Excel atau PDF profesional.</p>
-                <div class="form-row mt-20">
-                    <button class="btn btn-success" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Download Laporan Excel</button>
-                    <button class="btn btn-danger" onclick="exportToPDF()"><i class="fa-solid fa-file-pdf"></i> Download Laporan PDF</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- SETTINGS TAB -->
-        <section id="tab-settings" class="tab-content">
-            <h2>Konfigurasi Sistem & Firebase</h2>
-            <div class="section-box">
-                <h3>Firebase Configuration API Key</h3>
-                <p>Masukkan pengaturan kredensial Firebase Anda di sini agar sinkronisasi Cloud Firestore aktif.</p>
-                <form onsubmit="saveFirebaseConfig(event)">
-                    <div class="form-group">
-                        <label>API Key</label>
-                        <input type="text" id="fbApiKey" placeholder="AIzaSy...">
-                    </div>
-                    <div class="form-group">
-                        <label>Project ID</label>
-                        <input type="text" id="fbProjectId" placeholder="mang-emong-finance">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Simpan Konfigurasi</button>
-                </form>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- AI Voice Confirmation Modal -->
-    <div id="aiModal" class="modal">
-        <div class="modal-content">
-            <h3><i class="fa-solid fa-robot"></i> Konfirmasi Draf AI Voice</h3>
-            <p>AI mendengarkan perintah berikut. Periksa kembali sebelum disimpan ke database:</p>
-            <div id="aiDraftDetails" class="draft-box">
-                <!-- Filled dynamically -->
-            </div>
-            <div class="modal-buttons mt-20">
-                <button class="btn btn-success" onclick="confirmAIDraft()">Setujui & Simpan</button>
-                <button class="btn btn-danger" onclick="closeAIModal()">Batalkan</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Closing Shift Modal -->
-    <div id="shiftModal" class="modal">
-        <div class="modal-content">
-            <h3>Kelola Shift Kasir (Closing Cash)</h3>
-            <div class="form-group">
-                <label>Saldo Modal Awal (Opening Petty Cash):</label>
-                <input type="text" id="modalOpeningCash" inputmode="numeric" value="0">
-            </div>
-            <div class="form-group">
-                <label>Total Hitung Fisik Kas di Laci:</label>
-                <input type="text" id="modalPhysicalCash" inputmode="numeric" placeholder="Hitung uang fisik di laci">
-            </div>
-            <div class="modal-buttons mt-20">
-                <button class="btn btn-success" onclick="saveShiftClosing()">Simpan Closing</button>
-                <button class="btn btn-danger" onclick="closeShiftModal()">Tutup</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- SheetJS & jsPDF for Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
-    <!-- App Scripts -->
-    <script src="js/firebase-config.js"></script>
-    <script src="js/app.js"></script>
-    <!-- Sidebar Overlay untuk Mobile -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+            // 3. Arahkan ke dashboard utama
+            window.location.href = 'dashboard.html';
+          } else {
+            throw new Error('Data profil akun tidak ditemukan di database.');
+          }
+        })
+        .catch((error) => {
+          errorMsg.innerText = 'Gagal Login: ' + error.message;
+          errorMsg.style.display = 'block';
+          btnLogin.disabled = false;
+          btnLogin.innerText = 'Masuk ke Sistem';
+        });
+    });
+  </script>
 </body>
 </html>
