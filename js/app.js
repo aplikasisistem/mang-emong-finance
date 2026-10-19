@@ -1,612 +1,437 @@
-// State Aplikasi & Variable Utama
-let currentUserRole = 'cashier'; // Default role diset ke 'cashier'
-let openingCash = 0;
+// Register Service Worker PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail:', err));
+}
 
-let transactions = [];
-let inventory = [];
-let pendingAIDraft = null;
-
-// Inisialisasi saat load (Mengambil data online dari Firebase)
-window.onload = function() {
-    updateCategoryOptions();
-    fetchDataFromFirebase();
-    initRupiahInputs();
-    applyRolePermissions(); // Proteksi Tampilan & Privasi Modal
+// 1. Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB7-sRsDabjN9ypOVyJwhdA7jNczWIhoiQ",
+  authDomain: "manajemen-keuangan-mang-emong.firebaseapp.com",
+  databaseURL: "https://manajemen-keuangan-mang-emong-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "manajemen-keuangan-mang-emong",
+  storageBucket: "manajemen-keuangan-mang-emong.firebasestorage.app",
+  messagingSenderId: "719220664193",
+  appId: "1:719220664193:web:7141f6262a38c5851b6a80",
+  measurementId: "G-JTPDTWHRQW"
 };
 
-// Fungsi otomatisasi titik pemisah ribuan untuk semua input angka
-function formatRupiahInput(input) {
-    let value = input.value.replace(/[^,\d]/g, '').toString();
-    let split = value.split(',');
-    let sisa = split[0].length % 3;
-    let rupiah = split[0].substr(0, sisa);
-    let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+const OWNER_UID = "NfOuYEiGp9Py2uSxuuqN3llGZUI2";
+// Masukkan URL Google Apps Script Webhook Anda di bawah ini
+const GOOGLE_SHEETS_WEBHOOK_URL = ""; 
 
-    if (ribuan) {
-        let separator = sisa ? '.' : '';
-        rupiah += separator + ribuan.join('.');
-    }
-
-    rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
-    input.value = rupiah;
+let db = null;
+try {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  db = firebase.firestore();
+  console.log("Firebase & Firestore terhubung!");
+} catch (e) {
+  console.error("Gagal Inisialisasi Firebase:", e);
 }
 
-// Pasang event listener ke semua input angka di aplikasi
-function initRupiahInputs() {
-    const numberInputs = document.querySelectorAll('input[type="number"], input#txAmount, input#txQty, input#invQty, input#modalOpeningCash, input#modalPhysicalCash, input#inputDailyOpeningCash');
-    numberInputs.forEach(input => {
-        input.setAttribute('type', 'text');
-        input.setAttribute('inputmode', 'numeric');
-        input.addEventListener('input', function() {
-            formatRupiahInput(this);
-        });
-    });
+// State Data LocalStorage Fallback
+function getLocalData() {
+  return JSON.parse(localStorage.getItem('mang_emos_transactions') || '[]');
 }
 
-// Helper untuk membersihkan titik pemisah sebelum kalkulasi / simpan ke database
-function cleanNumber(value) {
-    if (!value) return 0;
-    return parseFloat(String(value).replace(/\./g, '').replace(/,/g, '.')) || 0;
+function saveLocalData(data) {
+  localStorage.setItem('mang_emos_transactions', JSON.stringify(data));
 }
 
-// Pengaturan Privasi & Proteksi Tampilan Berdasarkan Role Pengguna
-function applyRolePermissions() {
-    const isCashier = currentUserRole === 'cashier' || currentUserRole === 'kasir';
-
-    const cardExpense = document.getElementById('cardExpense');
-    if (cardExpense) cardExpense.style.display = isCashier ? 'none' : 'block';
-
-    const openingCashWrapper = document.getElementById('openingCashWrapper');
-    const modalOpeningGroup = document.getElementById('modalOpeningCashGroup');
-    if (openingCashWrapper) openingCashWrapper.style.display = isCashier ? 'none' : 'block';
-    if (modalOpeningGroup) modalOpeningGroup.style.display = isCashier ? 'none' : 'block';
-
-    document.querySelectorAll('.admin-only').forEach(el => {
-        el.style.display = isCashier ? 'none' : 'block';
-    });
-
-    const txTypeSelect = document.getElementById('txType');
-    if (txTypeSelect) {
-        if (isCashier) {
-            txTypeSelect.value = 'income';
-            document.querySelectorAll('.admin-only-option').forEach(opt => opt.style.display = 'none');
-        } else {
-            document.querySelectorAll('.admin-only-option').forEach(opt => opt.style.display = 'block');
-        }
-        updateCategoryOptions();
-    }
+// Helper Currency
+function formatRp(num) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 }
 
-// Ganti Role Pengguna (Admin / Kasir)
-function switchRole() {
-    currentUserRole = document.getElementById('userRoleSelect').value;
-    applyRolePermissions();
-    updateDashboard();
-    renderTransactions();
-    alert("Role diubah ke: " + (currentUserRole === 'admin' ? 'Admin (Mang Emong)' : 'Kasir Staf'));
-}
-
-// Navigasi Tab
-function switchTab(tabId) {
-    const tabs = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => tab.classList.remove('active'));
-
-    const menuItems = document.querySelectorAll('.sidebar ul li');
-    menuItems.forEach(item => item.classList.remove('active'));
-
-    const activeTab = document.getElementById('tab-' + tabId);
-    if (activeTab) {
-        activeTab.classList.add('active');
-    }
-}
-
-// Ambil Data dari Firebase Firestore secara Online (Real-time)
-function fetchDataFromFirebase() {
-    if (typeof db === 'undefined' || !db) {
-        console.warn("Database Firestore belum terinisialisasi. Menggunakan data lokal.");
-        renderTransactions();
-        renderInventory();
-        updateDashboard();
-        return;
-    }
-
-    db.collection("settings").doc("shiftConfig").onSnapshot((doc) => {
-        if (doc.exists && doc.data().openingCash !== undefined) {
-            openingCash = Number(doc.data().openingCash) || 0;
-        } else {
-            openingCash = 0;
-        }
-
-        const elDisplay = document.getElementById('openingCashDisplay');
-        if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
-
-        const elAdminDisplay = document.getElementById('adminOpeningCashDisplay');
-        if (elAdminDisplay) elAdminDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
-
-        updateDashboard();
-    }, (error) => {
-        console.error("Gagal mengambil data saldo awal: ", error);
-    });
-
-    db.collection("transactions").orderBy("date", "desc").onSnapshot((snapshot) => {
-        transactions = [];
-        snapshot.forEach((doc) => {
-            transactions.push({ id: doc.id, ...doc.data() });
-        });
-        renderTransactions();
-        renderInventory();
-        updateDashboard();
-    }, (error) => {
-        console.error("Gagal mengambil data transaksi: ", error);
-    });
-
-    db.collection("inventory").onSnapshot((snapshot) => {
-        inventory = [];
-        snapshot.forEach((doc) => {
-            inventory.push({ id: doc.id, ...doc.data() });
-        });
-        renderInventory();
-    }, (error) => {
-        console.error("Gagal mengambil data inventory: ", error);
-    });
-}
-
-// Update Kategori Berdasarkan Jenis Transaksi Restoran (Hanya Mie & Air untuk Pemasukan)
-function updateCategoryOptions() {
-    const typeSelect = document.getElementById('txType');
-    const catSelect = document.getElementById('txCategory');
-    if (!catSelect || !typeSelect) return;
-    
-    const type = typeSelect.value;
-    catSelect.innerHTML = '';
-
-    let categories = [];
-    if (type === 'income') {
-        categories = ['Mie', 'Air'];
-    } else {
-        categories = ['Bahan Baku / COGS', 'Operasional & Lainnya'];
-    }
-
-    categories.forEach(cat => {
-        let opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
-        catSelect.appendChild(opt);
-    });
-}
-
-// Simpan Transaksi ke Firebase Online (Dilengkapi Pengecekan Keamanan)
-function saveTransaction(e) {
+// 2. Auth & Login Logic
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const typeEl = document.getElementById('txType');
-    const categoryEl = document.getElementById('txCategory');
-    const amountEl = document.getElementById('txAmount');
-    const qtyEl = document.getElementById('txQty');
-    const noteEl = document.getElementById('txNote');
+    const input = document.getElementById('loginInput').value.trim();
+    const password = document.getElementById('passwordInput').value.trim();
+    const role = document.getElementById('roleSelect').value;
+    const alertBox = document.getElementById('loginAlert');
 
-    const type = typeEl ? typeEl.value : 'income';
-    const category = categoryEl ? categoryEl.value : 'Mie';
-    const amount = amountEl ? cleanNumber(amountEl.value) : 0;
-    const qty = qtyEl ? cleanNumber(qtyEl.value) : 0;
-    const note = noteEl ? noteEl.value : '';
+    alertBox.classList.remove('hidden', 'bg-rose-500/20', 'text-rose-300', 'bg-emerald-500/20', 'text-emerald-300');
 
-    const newTx = {
-        date: new Date().toISOString().split('T')[0],
-        type,
-        category,
-        amount,
-        qty,
-        payment: 'Cash',
-        note,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    // Login Pemilik via UID
+    if (input === OWNER_UID || input === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
+      localStorage.setItem('userRole', 'admin');
+      localStorage.setItem('userUID', OWNER_UID);
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    // Login via Firebase Email Auth
+    try {
+      const res = await firebase.auth().signInWithEmailAndPassword(input, password);
+      localStorage.setItem('userRole', role);
+      localStorage.setItem('userUID', res.user.uid);
+      window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
+    } catch (err) {
+      // Fallback Demo Login jika offline/kustom
+      if (role === 'kasir') {
+        localStorage.setItem('userRole', 'kasir');
+        window.location.href = 'kasir.html';
+      } else {
+        alertBox.classList.add('bg-rose-500/20', 'text-rose-300');
+        alertBox.innerText = "Login gagal: " + err.message;
+        alertBox.classList.remove('hidden');
+      }
+    }
+  });
+}
+
+function logout() {
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userUID');
+  firebase.auth().signOut().then(() => {
+    window.location.href = 'index.html';
+  }).catch(() => {
+    window.location.href = 'index.html';
+  });
+}
+
+// 3. Dual-Sync Push Data (Firestore + LocalStorage + Google Sheets)
+async function pushTransaction(trx) {
+  // LocalStorage
+  const local = getLocalData();
+  local.push(trx);
+  saveLocalData(local);
+
+  // Firebase
+  if (db) {
+    try {
+      await db.collection('transactions').add(trx);
+    } catch (err) {
+      console.warn("Firestore offline, tersimpan di LocalStorage");
+    }
+  }
+
+  // Google Sheets Webhook
+  if (GOOGLE_SHEETS_WEBHOOK_URL) {
+    try {
+      fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trx)
+      });
+    } catch (err) {
+      console.warn("Google Sheets Webhook error");
+    }
+  }
+}
+
+// 4. Modul Kasir Logic
+const kasirIncomeForm = document.getElementById('kasirIncomeForm');
+if (kasirIncomeForm) {
+  kasirIncomeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const method = document.getElementById('kasirPaymentMethod').value;
+    const amount = parseFloat(document.getElementById('kasirAmount').value);
+    const items = document.getElementById('kasirItems').value;
+
+    const trx = {
+      timestamp: new Date().toISOString(),
+      type: 'income',
+      category: method,
+      amount: amount,
+      items: items,
+      audit: '-'
     };
 
-    if (typeof db !== 'undefined' && db) {
-        db.collection("transactions").add(newTx)
-          .then(() => {
-              document.getElementById('transactionForm').reset();
-              alert("Transaksi berhasil disimpan secara online!");
-          })
-          .catch((error) => {
-              console.error("Gagal menyimpan transaksi: ", error);
-              alert("Gagal menyimpan ke database online: " + error.message);
-          });
-    } else {
-        alert("Database Firestore belum terhubung! Periksa koneksi atau konfigurasi Firebase Anda.");
-    }
+    await pushTransaction(trx);
+    alert('Pemasukan berhasil disimpan!');
+    kasirIncomeForm.reset();
+    updateKasirDisplay();
+  });
 }
 
-// Render Tabel Transaksi
-function renderTransactions() {
-    const tbody = document.getElementById('transactionTableBody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+function updateKasirDisplay() {
+  const data = getLocalData();
+  // Filter transaksi pemasukan pada shift berjalan
+  const currentShiftIncome = data.filter(d => d.type === 'income');
+  
+  const cashTotal = currentShiftIncome
+    .filter(d => d.category === 'Tunai')
+    .reduce((sum, d) => sum + d.amount, 0);
 
-    transactions.forEach(tx => {
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${tx.date}</td>
-            <td><span style="color: ${tx.type === 'income' ? '#27ae60' : '#c0392b'}; font-weight:600;">${tx.type.toUpperCase()}</span></td>
-            <td>${tx.category}</td>
-            <td>${tx.note || '-'}</td>
-            <td>${tx.qty ? Number(tx.qty).toLocaleString('id-ID') + ' Pcs' : '-'}</td>
-            <td>Rp ${Number(tx.amount).toLocaleString('id-ID')}</td>
-            <td>${currentUserRole === 'admin' ? `<button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteTransaction('${tx.id}')">Hapus</button>` : '<span style="color:#888; font-size:0.8rem;">No Access</span>'}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+  const nonCashTotal = currentShiftIncome
+    .filter(d => d.category !== 'Tunai')
+    .reduce((sum, d) => sum + d.amount, 0);
+
+  const cashDisp = document.getElementById('systemCashDisplay');
+  const nonCashDisp = document.getElementById('systemNonCashDisplay');
+
+  if (cashDisp) cashDisp.innerText = formatRp(cashTotal);
+  if (nonCashDisp) nonCashDisp.innerText = formatRp(nonCashTotal);
+
+  return cashTotal;
 }
 
-// Hapus Transaksi (Hanya Admin) dari Firebase
-function deleteTransaction(id) {
-    if (currentUserRole !== 'admin') {
-        alert("Akses ditolak! Hanya Admin (Mang Emong) yang dapat menghapus transaksi.");
-        return;
-    }
-    if (confirm("Yakin ingin menghapus transaksi ini dari database online?")) {
-        if (typeof db !== 'undefined' && db) {
-            db.collection("transactions").doc(id).delete()
-              .then(() => {
-                  alert("Transaksi berhasil dihapus!");
-              })
-              .catch((error) => {
-                  console.error("Gagal menghapus: ", error);
-              });
-        }
-    }
+let lastCalculatedVariance = null;
+
+function calculateVariance() {
+  const systemCash = updateKasirDisplay();
+  const physicalCash = parseFloat(document.getElementById('physicalCashInput').value || 0);
+  const diff = physicalCash - systemCash;
+
+  const auditBox = document.getElementById('auditBox');
+  const auditTitle = document.getElementById('auditTitle');
+  const auditDiff = document.getElementById('auditDiff');
+
+  auditBox.classList.remove('hidden', 'bg-emerald-500/20', 'border-emerald-500', 'bg-rose-500/20', 'border-rose-500', 'bg-amber-500/20', 'border-amber-500');
+
+  let statusText = "";
+  if (diff === 0) {
+    statusText = "PAS (Sesuai)";
+    auditBox.classList.add('bg-emerald-500/20', 'border-emerald-500');
+  } else if (diff < 0) {
+    statusText = "MINUS (Kurang)";
+    auditBox.classList.add('bg-rose-500/20', 'border-rose-500');
+  } else {
+    statusText = "SURPLUS (Lebih)";
+    auditBox.classList.add('bg-amber-500/20', 'border-amber-500');
+  }
+
+  auditTitle.innerText = `Status Audit: ${statusText}`;
+  auditDiff.innerText = formatRp(diff);
+  lastCalculatedVariance = { statusText, diff };
 }
 
-// Dashboard & Kalkulasi Keuangan
-function updateDashboard() {
-    let totalInc = 0;
-    let totalPcsSold = 0;
-    let cashSales = 0;
-    let bankSales = 0;
+async function processClosingShift() {
+  if (!lastCalculatedVariance) {
+    calculateVariance();
+  }
 
-    transactions.forEach(tx => {
-        let amt = Number(tx.amount) || 0;
-        let qty = Number(tx.qty) || 0;
-        if (tx.type === 'income') {
-            totalInc += amt;
-            totalPcsSold += qty;
-            if (tx.payment === 'Cash') {
-                cashSales += amt;
-            } else {
-                bankSales += amt;
-            }
-        }
-    });
+  const systemCash = updateKasirDisplay();
+  const physicalCash = parseFloat(document.getElementById('physicalCashInput').value || 0);
 
-    let currentDrawer = openingCash + cashSales;
-    let totalShiftSales = cashSales + bankSales;
+  const closingLog = {
+    timestamp: new Date().toISOString(),
+    type: 'closing',
+    category: 'Closing Shift Audit',
+    items: `Fisik: ${formatRp(physicalCash)} | System: ${formatRp(systemCash)}`,
+    amount: physicalCash,
+    audit: `${lastCalculatedVariance.statusText} (${formatRp(lastCalculatedVariance.diff)})`
+  };
 
-    const elInc = document.getElementById('totalIncome');
-    const elProductsSold = document.getElementById('totalProductsSold');
-    const elDrawer = document.getElementById('drawerCash');
-    
-    const elShiftCash = document.getElementById('shiftCashSales');
-    const elShiftBank = document.getElementById('shiftBankSales');
-    const elShiftTotal = document.getElementById('shiftTotalSales');
+  await pushTransaction(closingLog);
 
-    if (elInc) elInc.textContent = 'Rp ' + totalInc.toLocaleString('id-ID');
-    if (elProductsSold) elProductsSold.textContent = totalPcsSold.toLocaleString('id-ID') + ' Pcs';
-    if (elDrawer) elDrawer.textContent = 'Rp ' + currentDrawer.toLocaleString('id-ID');
-    
-    if (elShiftCash) elShiftCash.textContent = 'Rp ' + cashSales.toLocaleString('id-ID');
-    if (elShiftBank) elShiftBank.textContent = 'Rp ' + bankSales.toLocaleString('id-ID');
-    if (elShiftTotal) elShiftTotal.textContent = 'Rp ' + totalShiftSales.toLocaleString('id-ID');
-
-    const modalBankSummary = document.getElementById('modalBankSummary');
-    if (modalBankSummary) modalBankSummary.textContent = 'Rp ' + bankSales.toLocaleString('id-ID');
+  // Clear LocalStorage Shift
+  localStorage.setItem('mang_emos_transactions', JSON.stringify([]));
+  alert('Closing shift berhasil! Log disimpen & hitungan kasir direset ke 0.');
+  document.getElementById('physicalCashInput').value = '';
+  document.getElementById('auditBox').classList.add('hidden');
+  lastCalculatedVariance = null;
+  updateKasirDisplay();
 }
 
-// Shift Modal Operations & Auto-Save Closing Data ke Firebase Firestore
-function openShiftModal() {
-    document.getElementById('shiftModal').style.display = 'flex';
+// Initialize Kasir view if active
+if (document.getElementById('systemCashDisplay')) {
+  updateKasirDisplay();
 }
 
-function closeShiftModal() {
-    document.getElementById('shiftModal').style.display = 'none';
-}
+// 5. Admin Dashboard Logic
+const expenseForm = document.getElementById('expenseForm');
+if (expenseForm) {
+  expenseForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const category = document.getElementById('expenseCategory').value;
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const note = document.getElementById('expenseNote').value;
 
-function saveShiftClosing() {
-    const physicalCash = cleanNumber(document.getElementById('modalPhysicalCash').value);
-    
-    let cashSales = 0;
-    let bankSales = 0;
-    
-    transactions.forEach(tx => {
-        if (tx.type === 'income') {
-            let amt = Number(tx.amount) || 0;
-            if (tx.payment === 'Cash') cashSales += amt;
-            else bankSales += amt;
-        }
-    });
-
-    if (currentUserRole === 'admin') {
-        const valInput = cleanNumber(document.getElementById('modalOpeningCash').value);
-        openingCash = isNaN(valInput) ? 0 : valInput;
-
-        if (typeof db !== 'undefined' && db) {
-            db.collection("settings").doc("shiftConfig").set({
-                openingCash: openingCash
-            }).catch(err => console.error("Gagal menyimpan saldo awal:", err));
-        }
-    }
-
-    const systemCashDrawer = openingCash + cashSales;
-
-    const shiftClosingData = {
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        tanggal: new Date().toLocaleDateString('id-ID'),
-        jam: new Date().toLocaleTimeString('id-ID'),
-        kasir: currentUserRole === 'admin' ? 'Admin Mang Emong' : 'Staf Kasir',
-        penjualanTunaiSistem: cashSales,
-        penjualanBank: bankSales,
-        uangFisikLaci: physicalCash,
-        selisihKas: physicalCash - systemCashDrawer,
-        status: 'Closed & Reset'
+    const trx = {
+      timestamp: new Date().toISOString(),
+      type: 'expense',
+      category: category,
+      amount: amount,
+      items: note,
+      audit: '-'
     };
 
-    if (typeof db !== 'undefined' && db) {
-        db.collection("shift_closings").add(shiftClosingData)
-          .then(() => {
-              alert("Closing Shift Berhasil!\nHasil Shift telah di-reset kembali mulai dari 0.");
-              closeShiftModal();
-              document.getElementById('modalPhysicalCash').value = '';
-              updateDashboard();
-          })
-          .catch((error) => {
-              console.error("Gagal menyimpan closing shift: ", error);
-              alert("Gagal menyimpan closing ke database.");
-          });
-    } else {
-        alert("Database belum terhubung!");
-    }
+    await pushTransaction(trx);
+    alert('Catatan pengeluaran berhasil disimpan!');
+    expenseForm.reset();
+    renderDashboard();
+  });
 }
 
-// Manajemen Stok Bahan Baku
-function renderInventory() {
-    const tbody = document.getElementById('inventoryTableBody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    let stockMap = {};
-
-    inventory.forEach(item => {
-        let nameKey = item.name.trim().toLowerCase();
-        stockMap[nameKey] = {
-            id: item.id,
-            name: item.name,
-            qty: Number(item.qty) || 0,
-            unit: item.unit || 'pcs'
-        };
-    });
-
-    Object.keys(stockMap).forEach(key => {
-        let item = stockMap[key];
-        let statusText = item.qty > 5 ? 'Aman' : (item.qty > 0 ? 'Perhatian' : 'Habis');
-        let statusColor = item.qty > 5 ? '#27ae60' : (item.qty > 0 ? '#e67e22' : '#c0392b');
-
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><strong>${item.name}</strong></td>
-            <td>${item.qty}</td>
-            <td>${item.unit}</td>
-            <td><span style="color: ${statusColor}; font-weight:600;">${statusText}</span></td>
-            <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem;" onclick="restockItem('${item.id}', ${item.qty})">+ Tambah Stok</button></td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    if (Object.keys(stockMap).length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Belum ada data stok bahan baku.</td></tr>`;
-    }
-}
-
-function saveInventory(e) {
+// Fitur Tambah Akun Kasir (Admin)
+const addKasirForm = document.getElementById('addKasirForm');
+if (addKasirForm) {
+  addKasirForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('invName').value;
-    const qty = parseInt(cleanNumber(document.getElementById('invQty').value));
-    const unit = document.getElementById('invUnit').value;
-    const status = qty > 5 ? 'Aman' : 'Perhatian';
+    const email = document.getElementById('kasirEmail').value;
+    const password = document.getElementById('kasirPassword').value;
 
-    const newItem = { name, qty, unit, status };
-
-    if (typeof db !== 'undefined' && db) {
-        db.collection("inventory").add(newItem)
-          .then(() => {
-              document.getElementById('inventoryForm').reset();
-              alert("Stok berhasil diperbarui ke database online!");
-          })
-          .catch((error) => {
-              console.error("Gagal menyimpan stok: ", error);
-          });
+    try {
+      await firebase.auth().createUserWithEmailAndPassword(email, password);
+      alert(`Akun Kasir ${email} berhasil dibuat!`);
+      addKasirForm.reset();
+    } catch (err) {
+      alert("Gagal membuat akun: " + err.message);
     }
+  });
 }
 
-function restockItem(id, currentQty) {
-    let add = prompt("Masukkan jumlah penambahan stok:", "5");
-    if (add && typeof db !== 'undefined' && db) {
-        let newQty = currentQty + parseInt(cleanNumber(add));
-        let newStatus = newQty > 5 ? 'Aman' : 'Perhatian';
+// Render Data Dashboard
+function renderDashboard() {
+  const filter = document.getElementById('filterPeriod') ? document.getElementById('filterPeriod').value : 'all';
+  let data = getLocalData();
 
-        db.collection("inventory").doc(id).update({
-            qty: newQty,
-            status: newStatus
-        }).then(() => {
-            alert("Stok berhasil ditambah!");
-        }).catch(err => {
-            console.error("Gagal restock:", err);
-        });
+  // Date Filter Logic
+  const now = new Date();
+  if (filter === 'daily') {
+    data = data.filter(d => new Date(d.timestamp).toDateString() === now.toDateString());
+  } else if (filter === 'weekly') {
+    const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+    data = data.filter(d => new Date(d.timestamp) >= sevenDaysAgo);
+  } else if (filter === 'monthly') {
+    data = data.filter(d => new Date(d.timestamp).getMonth() === new Date().getMonth() && new Date(d.timestamp).getFullYear() === new Date().getFullYear());
+  } else if (filter === 'yearly') {
+    data = data.filter(d => new Date(d.timestamp).getFullYear() === new Date().getFullYear());
+  }
+
+  let cashIncome = 0;
+  let nonCashIncome = 0;
+  let totalExpense = 0;
+
+  const tbody = document.getElementById('transactionTableBody');
+  if (tbody) tbody.innerHTML = '';
+
+  data.forEach(item => {
+    if (item.type === 'income') {
+      if (item.category === 'Tunai') cashIncome += item.amount;
+      else nonCashIncome += item.amount;
+    } else if (item.type === 'expense') {
+      totalExpense += item.amount;
     }
+
+    if (tbody) {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-slate-700/50 hover:bg-slate-750';
+      const dateStr = new Date(item.timestamp).toLocaleString('id-ID');
+      
+      let badgeType = item.type === 'income' 
+        ? '<span class="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md font-semibold">Pemasukan</span>'
+        : (item.type === 'expense' 
+            ? '<span class="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded-md font-semibold">Pengeluaran</span>'
+            : '<span class="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md font-semibold">Closing Shift</span>');
+
+      tr.innerHTML = `
+        <td class="p-3.5 text-slate-400">${dateStr}</td>
+        <td class="p-3.5">${badgeType}</td>
+        <td class="p-3.5 font-medium">${item.category}</td>
+        <td class="p-3.5">${item.items}</td>
+        <td class="p-3.5 font-bold ${item.type === 'expense' ? 'text-rose-400' : 'text-emerald-400'}">${formatRp(item.amount)}</td>
+        <td class="p-3.5 text-slate-400">${item.audit || '-'}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+
+  const netProfit = (cashIncome + nonCashIncome) - totalExpense;
+
+  if (document.getElementById('cardCashIncome')) document.getElementById('cardCashIncome').innerText = formatRp(cashIncome);
+  if (document.getElementById('cardNonCashIncome')) document.getElementById('cardNonCashIncome').innerText = formatRp(nonCashIncome);
+  if (document.getElementById('cardTotalExpense')) document.getElementById('cardTotalExpense').innerText = formatRp(totalExpense);
+  if (document.getElementById('cardNetProfit')) document.getElementById('cardNetProfit').innerText = formatRp(netProfit);
 }
 
-// Fungsi Admin menetapkan Uang Modal Laci Hari Ini (Open Shift)
-function setDailyOpeningCash(e) {
-    e.preventDefault();
-    const inputEl = document.getElementById('inputDailyOpeningCash');
-    const amount = cleanNumber(inputEl ? inputEl.value : 0);
-
-    if (typeof db !== 'undefined' && db) {
-        db.collection("settings").doc("shiftConfig").set({
-            openingCash: amount,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: 'Admin Mang Emong'
-        }).then(() => {
-            alert("Modal awal laci hari ini berhasil diset sebesar Rp " + amount.toLocaleString('id-ID') + "!");
-            if (inputEl) inputEl.value = '';
-        }).catch((err) => {
-            console.error("Gagal menyimpan modal laci:", err);
-        });
-    }
+if (document.getElementById('transactionTableBody')) {
+  renderDashboard();
 }
 
-// AI Voice Simulation & Confirmation Modal
-function processVoiceCommand() {
-    const text = document.getElementById('voiceInputText').value.toLowerCase();
-    if (!text) {
-        alert("Masukkan perintah suara terlebih dahulu!");
-        return;
-    }
+// 6. Voice Command AI (Web Speech API)
+function startVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Browser Anda tidak mendukung fitur Voice Recognition.");
+    return;
+  }
 
-    let type = text.includes('pemasukan') || text.includes('jual') ? 'income' : 'expense';
-    let amount = 150000;
-    let qty = 10;
-    if (text.includes('200 ribu')) amount = 200000;
-    if (text.includes('450 ribu')) amount = 450000;
-    if (text.includes('50 ribu')) amount = 50000;
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'id-ID';
+  const micBtn = document.getElementById('micBtn');
 
-    pendingAIDraft = {
-        type: type,
-        category: type === 'income' ? 'Mie' : 'Bahan Baku / COGS',
+  recognition.onstart = () => {
+    micBtn.classList.add('bg-rose-600', 'animate-pulse');
+    micBtn.innerText = "🎙️ Mendengarkan...";
+  };
+
+  recognition.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript.toLowerCase();
+    console.log("Suara terdeteksi:", transcript);
+    micBtn.classList.remove('bg-rose-600', 'animate-pulse');
+    micBtn.innerText = "🎙️ AI Suara";
+
+    // Contoh Perintah: "Beli Daging Ayam 50000" / "Pengeluaran Listrik 150000"
+    const numberMatch = transcript.match(/\d+/g);
+    if (numberMatch) {
+      const amount = parseInt(numberMatch.join(''));
+      const note = transcript.replace(/\d+/g, '').replace('pengeluaran', '').replace('beli', '').trim();
+      
+      const trx = {
+        timestamp: new Date().toISOString(),
+        type: 'expense',
+        category: 'Operasional AI Suara',
         amount: amount,
-        qty: qty,
-        payment: 'Cash',
-        note: text
-    };
+        items: note || 'Pengeluaran Voice Command',
+        audit: '-'
+      };
 
-    document.getElementById('aiDraftDetails').innerHTML = `
-        <p><strong>Jenis:</strong> ${pendingAIDraft.type.toUpperCase()}</p>
-        <p><strong>Kategori:</strong> ${pendingAIDraft.category}</p>
-        <p><strong>Pemasukan:</strong> Rp ${pendingAIDraft.amount.toLocaleString('id-ID')}</p>
-        <p><strong>Jumlah Pcs:</strong> ${pendingAIDraft.qty} Pcs</p>
-        <p><strong>Keterangan AI:</strong> ${pendingAIDraft.note}</p>
-    `;
-
-    document.getElementById('aiModal').style.display = 'flex';
-}
-
-function confirmAIDraft() {
-    if (pendingAIDraft && typeof db !== 'undefined' && db) {
-        db.collection("transactions").add({
-            date: new Date().toISOString().split('T')[0],
-            ...pendingAIDraft,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            closeAIModal();
-            document.getElementById('voiceInputText').value = '';
-            alert("Data AI berhasil dikonfirmasi dan disimpan ke database online!");
-        }).catch(err => {
-            console.error("Gagal simpan AI draft:", err);
-        });
-    }
-}
-
-function closeAIModal() {
-    document.getElementById('aiModal').style.display = 'none';
-}
-
-// Pembuatan Akun Kasir Baru ke Firebase
-function createNewCashierAccount(event) {
-    event.preventDefault();
-
-    const email = document.getElementById('newEmail').value;
-    const password = document.getElementById('newPassword').value;
-    const name = document.getElementById('newName').value;
-    const role = document.getElementById('newRole').value;
-
-    if (typeof firebase !== 'undefined' && firebase.auth) {
-        firebase.auth().createUserWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                const uid = userCredential.user.uid;
-                return firebase.database().ref('users/' + uid).set({
-                    email: email,
-                    nama: name,
-                    role: role
-                });
-            })
-            .then(() => {
-                alert('Akun ' + role + ' berhasil ditambahkan!');
-                document.getElementById('createAccountForm').reset();
-            })
-            .catch((error) => {
-                alert('Gagal menambah akun: ' + error.message);
-            });
+      await pushTransaction(trx);
+      alert(`AI Suara Berhasil Mencatat:\n${note} - ${formatRp(amount)}`);
+      renderDashboard();
     } else {
-        alert("Firebase Auth SDK belum dikonfigurasi.");
+      alert(`Suara terdeteksi: "${transcript}". Harap sebutkan nominal angka.`);
     }
+  };
+
+  recognition.onerror = () => {
+    micBtn.classList.remove('bg-rose-600', 'animate-pulse');
+    micBtn.innerText = "🎙️ AI Suara";
+  };
+
+  recognition.start();
 }
 
-// Konfigurasi API Key
-function saveFirebaseConfig(e) {
-    e.preventDefault();
-    alert("Konfigurasi API Key Firebase berhasil disimpan!");
-}
-
-// Ekspor Excel & PDF
+// 7. Export Functions (Excel & PDF)
 function exportToExcel() {
-    let wsData = [["Tanggal", "Jenis", "Kategori", "Keterangan", "Jumlah (Pcs)", "Pemasukan (Rp)"]];
-    transactions.forEach(t => wsData.push([t.date, t.type, t.category, t.note, t.qty || 0, t.amount]));
-    
-    let wb = XLSX.utils.book_new();
-    let ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, "Transaksi Ramen");
-    XLSX.writeFile(wb, "Laporan_Keuangan_Mang_Emong.xlsx");
+  const data = getLocalData();
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Laporan Keuangan");
+  XLSX.writeFile(wb, `Laporan_Mang_Emos_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 function exportToPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("MANAJEMEN KEUANGAN - MANG EMONG RAMEN HOUSE", 14, 20);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("Laporan Keuangan & Operasional Restoran", 14, 26);
-    doc.text("Tanggal Cetak: " + new Date().toLocaleDateString('id-ID'), 14, 32);
-    
-    let y = 45;
-    doc.setFont("helvetica", "bold");
-    doc.text("Tanggal", 14, y);
-    doc.text("Jenis", 50, y);
-    doc.text("Kategori", 80, y);
-    doc.text("Pcs", 130, y);
-    doc.text("Pemasukan", 160, y);
-    
-    doc.setFont("helvetica", "normal");
-    y += 8;
-    transactions.forEach(t => {
-        doc.text(String(t.date), 14, y);
-        doc.text(String(t.type).toUpperCase(), 50, y);
-        doc.text(String(t.category).substring(0, 25), 80, y);
-        doc.text(String(t.qty || 0) + " Pcs", 130, y);
-        doc.text("Rp " + Number(t.amount).toLocaleString('id-ID'), 160, y);
-        y += 8;
-        if (y > 280) { doc.addPage(); y = 20; }
-    });
-    
-    doc.save("Laporan_Keuangan_Mang_Emong.pdf");
-}
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
 
-// Toggle Sidebar untuk Perangkat Mobile
-function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    
-    if (sidebar) sidebar.classList.toggle('active');
-    if (overlay) overlay.classList.toggle('active');
+  doc.text("MANG EMOS FINANCE - LAPORAN KEUANGAN", 14, 15);
+  doc.setFontSize(10);
+  doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 22);
+
+  const data = getLocalData();
+  const tableRows = data.map(d => [
+    new Date(d.timestamp).toLocaleDateString('id-ID'),
+    d.type,
+    d.category,
+    d.items,
+    d.amount,
+    d.audit || '-'
+  ]);
+
+  doc.autoTable({
+    head: [['Tanggal', 'Tipe', 'Kategori', 'Keterangan', 'Nominal', 'Audit']],
+    body: tableRows,
+    startY: 28,
+  });
+
+  doc.save(`Laporan_Mang_Emos_${new Date().toISOString().slice(0,10)}.pdf`);
 }
