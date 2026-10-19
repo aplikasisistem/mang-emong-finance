@@ -28,7 +28,7 @@ try {
 // --- AUTHENTICATION & ROLE MANAGEMENT ---
 
 function loginUser() {
-    const emailInput = document.getElementById("userEmailInput").value.trim();
+    const emailInput = document.getElementById("userEmailInput").value.trim().toLowerCase();
     const passwordInput = document.getElementById("userPasswordInput").value.trim();
     const selectedRole = document.getElementById("loginRoleSelect").value;
 
@@ -36,6 +36,43 @@ function loginUser() {
         return alert("Silahkan masukkan Email dan Password!");
     }
 
+    // Pengecekan khusus untuk Owner Utama (firman@ramenhouse.com)
+    if (emailInput === "firman@ramenhouse.com" || emailInput === "nfouyeigp9py2usxuuqn3llgzui2") {
+        if (passwordInput === "firman123@") {
+            currentUser = {
+                uid: "NfOuYEiGp9Py2uSxuuqN3llGZUI2",
+                role: "admin",
+                nama: "firman",
+                email: "firman@ramenhouse.com"
+            };
+            saveSessionAndProceed();
+            return;
+        } else {
+            return alert("Password salah! Silahkan periksa kembali password Anda.");
+        }
+    }
+
+    // Login via Firebase Authentication untuk akun lainnya
+    if (auth) {
+        auth.signInWithEmailAndPassword(emailInput, passwordInput)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                currentUser = {
+                    uid: user.uid,
+                    role: selectedRole,
+                    nama: user.email.split('@')[0],
+                    email: user.email
+                };
+                saveSessionAndProceed();
+            })
+            .catch((error) => {
+                console.error("Login Error:", error);
+                alert("Gagal Login: Email atau Password tidak ditemukan.");
+            });
+    } else {
+        alert("Firebase Auth belum siap.");
+    }
+}
     // Bypass khusus untuk Owner Utama Anda (firman@ramenhouse.com / UID NfOuYEiGp9Py2uSxuuqN3llGZUI2)
     if (emailInput === "firman@ramenhouse.com" || emailInput === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
         currentUser = {
