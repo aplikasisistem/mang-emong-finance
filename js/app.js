@@ -10,19 +10,65 @@ const firebaseConfig = {
     measurementId: "G-JTPDTWHRQW"
 };
 
-// Inisialisasi Firebase Realtime DB & Firestore (Compat)[cite: 1]
+// Inisialisasi Firebase Auth & Database (Compat)
 let dbRealtime = null;
 let dbFirestore = null;
+let auth = null;
 
 try {
     firebase.initializeApp(firebaseConfig);
     dbRealtime = firebase.database();
     dbFirestore = firebase.firestore();
-    console.log("Firebase terhubung ke project: manajemen-keuangan-mang-emong!");
+    auth = firebase.auth();
+    console.log("Firebase & Auth berhasil terhubung!");
 } catch (e) {
     console.error("Gagal menginisialisasi Firebase:", e);
 }
 
+// --- AUTHENTICATION & ROLE MANAGEMENT ---
+
+function loginUser() {
+    const emailInput = document.getElementById("userEmailInput").value.trim();
+    const passwordInput = document.getElementById("userPasswordInput").value.trim();
+    const selectedRole = document.getElementById("loginRoleSelect").value;
+
+    if (!emailInput || !passwordInput) {
+        return alert("Silahkan masukkan Email dan Password!");
+    }
+
+    // Bypass khusus untuk Owner Utama Anda (firman@ramenhouse.com / UID NfOuYEiGp9Py2uSxuuqN3llGZUI2)
+    if (emailInput === "firman@ramenhouse.com" || emailInput === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
+        currentUser = {
+            uid: "NfOuYEiGp9Py2uSxuuqN3llGZUI2",
+            role: "admin",
+            nama: "firman",
+            email: "firman@ramenhouse.com"
+        };
+        saveSessionAndProceed();
+        return;
+    }
+
+    // Login menggunakan Firebase Authentication untuk akun lainnya
+    if (auth) {
+        auth.signInWithEmailAndPassword(emailInput, passwordInput)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                currentUser = {
+                    uid: user.uid,
+                    role: selectedRole,
+                    nama: user.email.split('@')[0],
+                    email: user.email
+                };
+                saveSessionAndProceed();
+            })
+            .catch((error) => {
+                console.error("Login Error:", error);
+                alert("Gagal Login: " + error.message);
+            });
+    } else {
+        alert("Firebase Auth belum siap.");
+    }
+}
 // Global Application State
 let currentUser = null; 
 let transactions = [];
