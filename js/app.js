@@ -1,5 +1,5 @@
-// State Aplikasi & Mock Data Awal
-let currentUserRole = 'admin'; // 'admin' atau 'cashier'
+// State Aplikasi & Variable Utama
+let currentUserRole = 'cashier'; // Default role diset ke 'cashier'
 let openingCash = 0;
 
 let transactions = [];
@@ -11,6 +11,7 @@ window.onload = function() {
     updateCategoryOptions();
     fetchDataFromFirebase();
     initRupiahInputs();
+    applyRolePermissions(); // Proteksi Tampilan & Privasi Modal
 };
 
 // Fungsi otomatisasi titik pemisah ribuan untuk semua input angka
@@ -48,9 +49,66 @@ function cleanNumber(value) {
     return parseFloat(String(value).replace(/\./g, '').replace(/,/g, '.')) || 0;
 }
 
+// Pengaturan Privasi & Proteksi Tampilan Berdasarkan Role Pengguna
+function applyRolePermissions() {
+    const isCashier = currentUserRole === 'cashier' || currentUserRole === 'cashier';
+
+    // 1. Sembunyikan Card Pengeluaran & Net Profit dari Kasir
+    const cardExpense = document.getElementById('cardExpense');
+    const cardProfit = document.getElementById('cardProfit');
+    if (cardExpense) cardExpense.style.display = isCashier ? 'none' : 'block';
+    if (cardProfit) cardProfit.style.display = isCashier ? 'none' : 'block';
+
+    // 2. Sembunyikan Tampilan Saldo Modal Awal dari Kasir
+    const openingCashWrapper = document.getElementById('openingCashWrapper');
+    const modalOpeningGroup = document.getElementById('modalOpeningCashGroup');
+    if (openingCashWrapper) openingCashWrapper.style.display = isCashier ? 'none' : 'block';
+    if (modalOpeningGroup) modalOpeningGroup.style.display = isCashier ? 'none' : 'block';
+
+    // 3. Sembunyikan Menu Sidebar Khusus Admin dari Kasir
+    document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.display = isCashier ? 'none' : 'block';
+    });
+
+    // 4. Batasi Opsi Pengeluaran pada Form Transaksi Kasir
+    const txTypeSelect = document.getElementById('txType');
+    if (txTypeSelect) {
+        if (isCashier) {
+            txTypeSelect.value = 'income';
+            document.querySelectorAll('.admin-only-option').forEach(opt => opt.style.display = 'none');
+        } else {
+            document.querySelectorAll('.admin-only-option').forEach(opt => opt.style.display = 'block');
+        }
+        updateCategoryOptions();
+    }
+}
+
+// Ganti Role Pengguna (Admin / Kasir)
+function switchRole() {
+    currentUserRole = document.getElementById('userRoleSelect').value;
+    applyRolePermissions();
+    updateDashboard();
+    renderTransactions();
+    alert("Role diubah ke: " + (currentUserRole === 'admin' ? 'Admin (Mang Emong)' : 'Kasir Staf'));
+}
+
+// Navigasi Tab
+function switchTab(tabId) {
+    const tabs = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => tab.classList.remove('active'));
+
+    const menuItems = document.querySelectorAll('.sidebar ul li');
+    menuItems.forEach(item => item.classList.remove('active'));
+
+    const activeTab = document.getElementById('tab-' + tabId);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+}
+
 // Ambil Data dari Firebase Firestore secara Online
 function fetchDataFromFirebase() {
-    if (!db) {
+    if (typeof db === 'undefined' || !db) {
         console.warn("Database Firestore belum terinisialisasi. Menggunakan data lokal.");
         renderTransactions();
         renderInventory();
@@ -66,7 +124,6 @@ function fetchDataFromFirebase() {
             openingCash = 0;
         }
 
-        // Perbarui semua elemen penampil saldo awal di UI secara dinamis
         const elDisplay = document.getElementById('openingCashDisplay');
         if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
 
@@ -99,27 +156,13 @@ function fetchDataFromFirebase() {
     });
 }
 
-// Navigasi Tab
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.sidebar li').forEach(el => el.classList.remove('active'));
-    
-    document.getElementById('tab-' + tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
-}
-
-// Ganti Role Pengguna
-function switchRole() {
-    currentUserRole = document.getElementById('userRoleSelect').value;
-    alert("Role diubah ke: " + (currentUserRole === 'admin' ? 'Admin (Mang Emong)' : 'Kasir Staf'));
-    renderTransactions();
-}
-
 // Update Kategori Berdasarkan Jenis Transaksi Restoran
 function updateCategoryOptions() {
-    const type = document.getElementById('txType').value;
+    const typeSelect = document.getElementById('txType');
     const catSelect = document.getElementById('txCategory');
-    if (!catSelect) return;
+    if (!catSelect || !typeSelect) return;
+    
+    const type = typeSelect.value;
     catSelect.innerHTML = '';
 
     let categories = [];
@@ -156,7 +199,7 @@ function saveTransaction(e) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    if (db) {
+    if (typeof db !== 'undefined' && db) {
         db.collection("transactions").add(newTx)
           .then(() => {
               document.getElementById('transactionForm').reset();
@@ -183,7 +226,7 @@ function renderTransactions() {
             <td>${tx.date}</td>
             <td><span style="color: ${tx.type === 'income' ? '#27ae60' : '#c0392b'}; font-weight:600;">${tx.type.toUpperCase()}</span></td>
             <td>${tx.category}</td>
-            <td>${tx.note}</td>
+            <td>${tx.note || '-'}</td>
             <td>${tx.payment}</td>
             <td>Rp ${Number(tx.amount).toLocaleString('id-ID')}</td>
             <td>${currentUserRole === 'admin' ? `<button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteTransaction('${tx.id}')">Hapus</button>` : '<span style="color:#888; font-size:0.8rem;">No Access</span>'}</td>
@@ -199,7 +242,7 @@ function deleteTransaction(id) {
         return;
     }
     if (confirm("Yakin ingin menghapus transaksi ini dari database online?")) {
-        if (db) {
+        if (typeof db !== 'undefined' && db) {
             db.collection("transactions").doc(id).delete()
               .then(() => {
                   alert("Transaksi berhasil dihapus!");
@@ -211,11 +254,12 @@ function deleteTransaction(id) {
     }
 }
 
-// Dashboard & Kalkulasi Keuangan
+// Dashboard & Kalkulasi Keuangan (Menghitung Kas & Bank/QRIS)
 function updateDashboard() {
     let totalInc = 0;
     let totalExp = 0;
     let cashSales = 0;
+    let bankSales = 0;
 
     transactions.forEach(tx => {
         let amt = Number(tx.amount) || 0;
@@ -223,6 +267,8 @@ function updateDashboard() {
             totalInc += amt;
             if (tx.payment === 'Cash') {
                 cashSales += amt;
+            } else {
+                bankSales += amt; // QRIS / Transfer / EDC
             }
         } else {
             totalExp += amt;
@@ -231,18 +277,98 @@ function updateDashboard() {
 
     let net = totalInc - totalExp;
     let currentDrawer = openingCash + cashSales;
+    let totalShiftSales = cashSales + bankSales;
 
     const elInc = document.getElementById('totalIncome');
     const elExp = document.getElementById('totalExpense');
     const elNet = document.getElementById('netProfit');
     const elDrawer = document.getElementById('drawerCash');
+    
     const elShiftCash = document.getElementById('shiftCashSales');
+    const elShiftBank = document.getElementById('shiftBankSales');
+    const elShiftTotal = document.getElementById('shiftTotalSales');
 
     if (elInc) elInc.textContent = 'Rp ' + totalInc.toLocaleString('id-ID');
     if (elExp) elExp.textContent = 'Rp ' + totalExp.toLocaleString('id-ID');
     if (elNet) elNet.textContent = 'Rp ' + net.toLocaleString('id-ID');
     if (elDrawer) elDrawer.textContent = 'Rp ' + currentDrawer.toLocaleString('id-ID');
+    
     if (elShiftCash) elShiftCash.textContent = 'Rp ' + cashSales.toLocaleString('id-ID');
+    if (elShiftBank) elShiftBank.textContent = 'Rp ' + bankSales.toLocaleString('id-ID');
+    if (elShiftTotal) elShiftTotal.textContent = 'Rp ' + totalShiftSales.toLocaleString('id-ID');
+
+    const modalBankSummary = document.getElementById('modalBankSummary');
+    if (modalBankSummary) modalBankSummary.textContent = 'Rp ' + bankSales.toLocaleString('id-ID');
+}
+
+// Shift Modal Operations & Auto-Save Closing Data ke Firebase Firestore
+function openShiftModal() {
+    document.getElementById('shiftModal').style.display = 'flex';
+}
+
+function closeShiftModal() {
+    document.getElementById('shiftModal').style.display = 'none';
+}
+
+function saveShiftClosing() {
+    const physicalCash = cleanNumber(document.getElementById('modalPhysicalCash').value);
+    
+    let cashSales = 0;
+    let bankSales = 0;
+    
+    transactions.forEach(tx => {
+        if (tx.type === 'income') {
+            let amt = Number(tx.amount) || 0;
+            if (tx.payment === 'Cash') cashSales += amt;
+            else bankSales += amt;
+        }
+    });
+
+    // Update Modal Awal hanya jika Role adalah Admin
+    if (currentUserRole === 'admin') {
+        const valInput = cleanNumber(document.getElementById('modalOpeningCash').value);
+        openingCash = isNaN(valInput) ? 0 : valInput;
+
+        if (typeof db !== 'undefined' && db) {
+            db.collection("settings").doc("shiftConfig").set({
+                openingCash: openingCash
+            }).catch(err => console.error("Gagal menyimpan saldo awal:", err));
+        }
+    }
+
+    const systemCashDrawer = openingCash + cashSales;
+    const totalSemuaKeuangan = physicalCash + bankSales; // Akumulasi Kas Fisik Laci + Rekening Bank/QRIS
+
+    // Objek Data Rekonsiliasi Closing Shift
+    const shiftClosingData = {
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        tanggal: new Date().toLocaleDateString('id-ID'),
+        jam: new Date().toLocaleTimeString('id-ID'),
+        kasir: currentUserRole === 'admin' ? 'Admin Mang Emong' : 'Staf Kasir',
+        penjualanTunaiSistem: cashSales,
+        penjualanBank: bankSales,
+        uangFisikLaci: physicalCash,
+        selisihKas: physicalCash - systemCashDrawer,
+        totalAkumulasiSemua: totalSemuaKeuangan,
+        status: 'Closed'
+    };
+
+    // Simpan Rekam Data Closing ke Firebase
+    if (typeof db !== 'undefined' && db) {
+        db.collection("shift_closings").add(shiftClosingData)
+          .then(() => {
+              alert("Closing Shift Berhasil!\nData telah tersimpan secara otomatis ke database Firebase.");
+              closeShiftModal();
+              document.getElementById('modalPhysicalCash').value = '';
+              updateDashboard();
+          })
+          .catch((error) => {
+              console.error("Gagal menyimpan closing shift: ", error);
+              alert("Gagal menyimpan closing ke database.");
+          });
+    } else {
+        alert("Database belum terhubung!");
+    }
 }
 
 // Manajemen Stok ke Firebase
@@ -255,7 +381,7 @@ function saveInventory(e) {
 
     const newItem = { name, qty, unit, status };
 
-    if (db) {
+    if (typeof db !== 'undefined' && db) {
         db.collection("inventory").add(newItem)
           .then(() => {
               document.getElementById('inventoryForm').reset();
@@ -287,20 +413,18 @@ function renderInventory() {
 
 function restockItem(id, currentQty) {
     let add = prompt("Masukkan jumlah penambahan stok:", "5");
-    if (add) {
+    if (add && typeof db !== 'undefined' && db) {
         let newQty = currentQty + parseInt(cleanNumber(add));
         let newStatus = newQty > 5 ? 'Aman' : 'Perhatian';
 
-        if (db) {
-            db.collection("inventory").doc(id).update({
-                qty: newQty,
-                status: newStatus
-            }).then(() => {
-                alert("Stok berhasil ditambah!");
-            }).catch(err => {
-                console.error("Gagal restock:", err);
-            });
-        }
+        db.collection("inventory").doc(id).update({
+            qty: newQty,
+            status: newStatus
+        }).then(() => {
+            alert("Stok berhasil ditambah!");
+        }).catch(err => {
+            console.error("Gagal restock:", err);
+        });
     }
 }
 
@@ -337,7 +461,7 @@ function processVoiceCommand() {
 }
 
 function confirmAIDraft() {
-    if (pendingAIDraft && db) {
+    if (pendingAIDraft && typeof db !== 'undefined' && db) {
         db.collection("transactions").add({
             date: new Date().toISOString().split('T')[0],
             ...pendingAIDraft,
@@ -356,35 +480,39 @@ function closeAIModal() {
     document.getElementById('aiModal').style.display = 'none';
 }
 
-// Shift Modal (Tersimpan ke Firestore secara Permanen)
-function openShiftModal() {
-    document.getElementById('shiftModal').style.display = 'flex';
-}
-function closeShiftModal() {
-    document.getElementById('shiftModal').style.display = 'none';
-}
-function saveShiftClosing() {
-    const valInput = cleanNumber(document.getElementById('modalOpeningCash').value);
-    openingCash = isNaN(valInput) ? 0 : valInput;
+// Pembuatan Akun Kasir Baru ke Firebase
+function createNewCashierAccount(event) {
+    event.preventDefault();
 
-    if (db) {
-        db.collection("settings").doc("shiftConfig").set({
-            openingCash: openingCash
-        }).then(() => {
-            console.log("Saldo awal berhasil disimpan secara online!");
-        }).catch(err => {
-            console.error("Gagal menyimpan saldo awal:", err);
-        });
+    const email = document.getElementById('newEmail').value;
+    const password = document.getElementById('newPassword').value;
+    const name = document.getElementById('newName').value;
+    const role = document.getElementById('newRole').value;
+
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                const uid = userCredential.user.uid;
+
+                return firebase.database().ref('users/' + uid).set({
+                    email: email,
+                    nama: name,
+                    role: role
+                });
+            })
+            .then(() => {
+                alert('Akun ' + role + ' berhasil ditambahkan!');
+                document.getElementById('createAccountForm').reset();
+            })
+            .catch((error) => {
+                alert('Gagal menambah akun: ' + error.message);
+            });
+    } else {
+        alert("Firebase Auth SDK belum dikonfigurasi.");
     }
-
-    const elDisplay = document.getElementById('openingCashDisplay');
-    if (elDisplay) elDisplay.textContent = 'Rp ' + openingCash.toLocaleString('id-ID');
-    closeShiftModal();
-    updateDashboard();
-    alert("Saldo awal kasir berhasil disimpan!");
 }
 
-// Firebase Config Save
+// Konfigurasi API Key
 function saveFirebaseConfig(e) {
     e.preventDefault();
     alert("Konfigurasi API Key Firebase berhasil disimpan!");
@@ -435,57 +563,11 @@ function exportToPDF() {
     doc.save("Laporan_Keuangan_Mang_Emong.pdf");
 }
 
-// Fungsi untuk membuka/menutup sidebar di HP
+// Toggle Sidebar untuk Perangkat Mobile
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     
     if (sidebar) sidebar.classList.toggle('active');
     if (overlay) overlay.classList.toggle('active');
-}
-// 1. Fungsi Pindah Tab (Termasuk Tab Manajemen Akun Kasir)
-function switchTab(tabId) {
-    // Sembunyikan semua tab
-    const tabs = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => tab.classList.remove('active'));
-
-    // Hapus status aktif dari semua menu sidebar
-    const menuItems = document.querySelectorAll('.sidebar ul li');
-    menuItems.forEach(item => item.classList.remove('active'));
-
-    // Tampilkan tab yang dipilih
-    const activeTab = document.getElementById('tab-' + tabId);
-    if (activeTab) {
-        activeTab.classList.add('active');
-    }
-}
-
-// 2. Fungsi untuk Pemilik Menambahkan Akun Kasir Baru ke Firebase
-function createNewCashierAccount(event) {
-    event.preventDefault();
-
-    const email = document.getElementById('newEmail').value;
-    const password = document.getElementById('newPassword').value;
-    const name = document.getElementById('newName').value;
-    const role = document.getElementById('newRole').value;
-
-    // Membuat akun di Firebase Authentication
-    firebase.auth().createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            const uid = userCredential.user.uid;
-
-            // Menyimpan data profile & role ke Realtime Database secara online
-            return firebase.database().ref('users/' + uid).set({
-                email: email,
-                nama: name,
-                role: role
-            });
-        })
-        .then(() => {
-            alert('Akun ' + role + ' berhasil ditambahkan!');
-            document.getElementById('createAccountForm').reset();
-        })
-        .catch((error) => {
-            alert('Gagal menambah akun: ' + error.message);
-        });
 }
