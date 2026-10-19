@@ -24,37 +24,42 @@
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
 
-    <!-- Modal Login -->
-    <div id="loginModal" class="fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-800 text-white rounded-xl p-6 w-full max-w-md shadow-2xl border border-slate-700">
-            <div class="text-center mb-6">
-                <div class="bg-indigo-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-                    <i class="fa-solid fa-bowl-food text-3xl"></i>
-                </div>
-                <h2 class="text-2xl font-extrabold tracking-wide text-white">MANG EMOS FINANCE</h2>
-                <p class="text-xs text-slate-400 mt-1">Sistem Manajemen Keuangan Resto & Kasir</p>
+   <!-- Modal Login -->
+<div id="loginModal" class="fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-800 text-white rounded-xl p-6 w-full max-w-md shadow-2xl border border-slate-700">
+        <div class="text-center mb-6">
+            <div class="bg-indigo-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <i class="fa-solid fa-bowl-food text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold tracking-wide text-white">MANG EMOS FINANCE</h2>
+            <p class="text-xs text-slate-400 mt-1">Sistem Manajemen Keuangan Resto & Kasir</p>
+        </div>
+        
+        <form onsubmit="event.preventDefault(); loginUser();" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Email / Owner UID</label>
+                <input type="text" id="userEmailInput" placeholder="Masukkan Email atau UID" required class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+                <input type="password" id="userPasswordInput" placeholder="Masukkan Password" required class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             
-            <form onsubmit="event.preventDefault(); loginUser();" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Email / Owner UID</label>
-                    <input type="text" id="userUidInput" placeholder="Masukkan Email atau UID" required class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Mode Akses Masuk</label>
-                    <select id="loginRoleSelect" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="admin">Admin / Pemilik (Full Akses)</option>
-                        <option value="kasir">Kasir (Akses Terbatas)</option>
-                    </select>
-                </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Mode Akses Masuk</label>
+                <select id="loginRoleSelect" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="admin">Admin / Pemilik (Full Akses)</option>
+                    <option value="kasir">Kasir (Akses Terbatas)</option>
+                </select>
+            </div>
 
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-200 shadow-lg text-sm mt-2">
-                    Masuk ke Sistem
-                </button>
-            </form>
-        </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-200 shadow-lg text-sm mt-2">
+                Masuk ke Sistem
+            </button>
+        </form>
     </div>
+</div>
 
     <!-- Main App Layout -->
     <div id="appContainer" class="hidden min-h-screen flex flex-col">
