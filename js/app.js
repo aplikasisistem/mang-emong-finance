@@ -1,3 +1,13 @@
+const input = document.getElementById('loginInput').value.trim();
+const role = document.getElementById('roleSelect').value;
+
+// Bypass mutlak untuk Owner UID atau Email Owner
+if (input === "NfOuYEiGp9Py2uSxuuqN3llGZUI2" || input.toLowerCase() === "firman@ramenhouse.com") {
+  localStorage.setItem('userRole', role);
+  localStorage.setItem('userUID', "NfOuYEiGp9Py2uSxuuqN3llGZUI2");
+  window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
+  return;
+}
 // Register Service Worker PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail:', err));
