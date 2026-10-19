@@ -33,7 +33,7 @@ function formatRupiahInput(input) {
 
 // Pasang event listener ke semua input angka di aplikasi
 function initRupiahInputs() {
-    const numberInputs = document.querySelectorAll('input[type="number"], input#txAmount, input#invQty, input#modalOpeningCash, input#modalPhysicalCash, input#inputDailyOpeningCash');
+    const numberInputs = document.querySelectorAll('input[type="number"], input#txAmount, input#txQty, input#invQty, input#modalOpeningCash, input#modalPhysicalCash, input#inputDailyOpeningCash');
     numberInputs.forEach(input => {
         input.setAttribute('type', 'text');
         input.setAttribute('inputmode', 'numeric');
@@ -181,7 +181,7 @@ function saveTransaction(e) {
     const type = document.getElementById('txType').value;
     const category = document.getElementById('txCategory').value;
     const amount = cleanNumber(document.getElementById('txAmount').value);
-    const payment = document.getElementById('txPayment').value;
+    const qty = cleanNumber(document.getElementById('txQty').value);
     const note = document.getElementById('txNote').value;
 
     const newTx = {
@@ -189,7 +189,8 @@ function saveTransaction(e) {
         type,
         category,
         amount,
-        payment,
+        qty,
+        payment: 'Cash',
         note,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -222,7 +223,7 @@ function renderTransactions() {
             <td><span style="color: ${tx.type === 'income' ? '#27ae60' : '#c0392b'}; font-weight:600;">${tx.type.toUpperCase()}</span></td>
             <td>${tx.category}</td>
             <td>${tx.note || '-'}</td>
-            <td>${tx.payment}</td>
+            <td>${tx.qty ? Number(tx.qty).toLocaleString('id-ID') + ' Pcs' : '-'}</td>
             <td>Rp ${Number(tx.amount).toLocaleString('id-ID')}</td>
             <td>${currentUserRole === 'admin' ? `<button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteTransaction('${tx.id}')">Hapus</button>` : '<span style="color:#888; font-size:0.8rem;">No Access</span>'}</td>
         `;
@@ -252,15 +253,16 @@ function deleteTransaction(id) {
 // Dashboard & Kalkulasi Keuangan
 function updateDashboard() {
     let totalInc = 0;
-    let totalProductsCount = 0;
+    let totalPcsSold = 0;
     let cashSales = 0;
     let bankSales = 0;
 
     transactions.forEach(tx => {
         let amt = Number(tx.amount) || 0;
+        let qty = Number(tx.qty) || 0;
         if (tx.type === 'income') {
             totalInc += amt;
-            totalProductsCount += amt; // Total pemasukan produk terjual (Mie/Air)
+            totalPcsSold += qty; // Akumulasi pcs produk terjual
             if (tx.payment === 'Cash') {
                 cashSales += amt;
             } else {
@@ -281,7 +283,7 @@ function updateDashboard() {
     const elShiftTotal = document.getElementById('shiftTotalSales');
 
     if (elInc) elInc.textContent = 'Rp ' + totalInc.toLocaleString('id-ID');
-    if (elProductsSold) elProductsSold.textContent = 'Rp ' + totalProductsCount.toLocaleString('id-ID');
+    if (elProductsSold) elProductsSold.textContent = totalPcsSold.toLocaleString('id-ID') + ' Pcs';
     if (elDrawer) elDrawer.textContent = 'Rp ' + currentDrawer.toLocaleString('id-ID');
     
     if (elShiftCash) elShiftCash.textContent = 'Rp ' + cashSales.toLocaleString('id-ID');
@@ -464,6 +466,7 @@ function processVoiceCommand() {
 
     let type = text.includes('pemasukan') || text.includes('jual') ? 'income' : 'expense';
     let amount = 150000;
+    let qty = 10;
     if (text.includes('200 ribu')) amount = 200000;
     if (text.includes('450 ribu')) amount = 450000;
     if (text.includes('50 ribu')) amount = 50000;
@@ -472,6 +475,7 @@ function processVoiceCommand() {
         type: type,
         category: type === 'income' ? 'Mie' : 'Bahan Baku / COGS',
         amount: amount,
+        qty: qty,
         payment: 'Cash',
         note: text
     };
@@ -479,7 +483,8 @@ function processVoiceCommand() {
     document.getElementById('aiDraftDetails').innerHTML = `
         <p><strong>Jenis:</strong> ${pendingAIDraft.type.toUpperCase()}</p>
         <p><strong>Kategori:</strong> ${pendingAIDraft.category}</p>
-        <p><strong>Jumlah:</strong> Rp ${pendingAIDraft.amount.toLocaleString('id-ID')}</p>
+        <p><strong>Pemasukan:</strong> Rp ${pendingAIDraft.amount.toLocaleString('id-ID')}</p>
+        <p><strong>Jumlah Pcs:</strong> ${pendingAIDraft.qty} Pcs</p>
         <p><strong>Keterangan AI:</strong> ${pendingAIDraft.note}</p>
     `;
 
@@ -545,8 +550,8 @@ function saveFirebaseConfig(e) {
 
 // Ekspor Excel & PDF
 function exportToExcel() {
-    let wsData = [["Tanggal", "Jenis", "Kategori", "Keterangan", "Metode", "Jumlah"]];
-    transactions.forEach(t => wsData.push([t.date, t.type, t.category, t.note, t.payment, t.amount]));
+    let wsData = [["Tanggal", "Jenis", "Kategori", "Keterangan", "Jumlah (Pcs)", "Pemasukan (Rp)"]];
+    transactions.forEach(t => wsData.push([t.date, t.type, t.category, t.note, t.qty || 0, t.amount]));
     
     let wb = XLSX.utils.book_new();
     let ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -572,7 +577,8 @@ function exportToPDF() {
     doc.text("Tanggal", 14, y);
     doc.text("Jenis", 50, y);
     doc.text("Kategori", 80, y);
-    doc.text("Jumlah", 160, y);
+    doc.text("Pcs", 130, y);
+    doc.text("Pemasukan", 160, y);
     
     doc.setFont("helvetica", "normal");
     y += 8;
@@ -580,6 +586,7 @@ function exportToPDF() {
         doc.text(String(t.date), 14, y);
         doc.text(String(t.type).toUpperCase(), 50, y);
         doc.text(String(t.category).substring(0, 25), 80, y);
+        doc.text(String(t.qty || 0) + " Pcs", 130, y);
         doc.text("Rp " + Number(t.amount).toLocaleString('id-ID'), 160, y);
         y += 8;
         if (y > 280) { doc.addPage(); y = 20; }
