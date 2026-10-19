@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MANG EMOS FINANCE - Admin Dashboard</title>
+  <title>MANG EMOS FINANCE - Kasir</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4f46e5">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,19 +15,13 @@
       theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
     }
   </script>
-
-  <!-- Firebase SDK Compat Lengkap (App, Auth, Firestore, & Realtime Database) -->
+  <!-- Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
-  <!-- XLSX & PDF Libs (Khusus Dashboard Admin) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
-  <!-- Top Nav -->
+<body class="bg-slate-900 font-sans text-slate-100 min-h-screen pb-12">
   <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <span class="text-2xl">🍜</span>
@@ -43,7 +36,6 @@
   </header>
 
   <main class="max-w-4xl mx-auto px-4 mt-6 space-y-6">
-    <!-- Form Input Pemasukan -->
     <section class="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-xl">
       <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
         <span>💰</span> Input Uang Masuk & Penjualan
@@ -74,7 +66,6 @@
       </form>
     </section>
 
-    <!-- Closing Shift & Cash Variance -->
     <section class="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-xl space-y-4">
       <h2 class="text-lg font-bold text-white flex items-center gap-2">
         <span>🔒</span> Proses Closing Shift (Audit Laci Kas)
@@ -100,7 +91,6 @@
         Cek Selisih Kas (Audit Variance)
       </button>
 
-      <!-- Audit Output -->
       <div id="auditBox" class="hidden p-4 rounded-xl border text-center space-y-1">
         <p class="text-sm font-semibold" id="auditTitle">Status Audit: -</p>
         <p class="text-xl font-bold" id="auditDiff">Rp 0</p>
