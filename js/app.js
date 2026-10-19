@@ -16,7 +16,6 @@ const firebaseConfig = {
 };
 
 const OWNER_UID = "NfOuYEiGp9Py2uSxuuqN3llGZUI2";
-// Masukkan URL Google Apps Script Webhook Anda di bawah ini
 const GOOGLE_SHEETS_WEBHOOK_URL = ""; 
 
 let db = null;
@@ -44,7 +43,7 @@ function formatRp(num) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 }
 
-// 2. Auth & Login Logic (Updated for Realtime Database & UID Check)
+// 2. Auth & Login Logic (Terintegrasi Realtime Database & Owner UID)
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
@@ -56,7 +55,7 @@ if (loginForm) {
 
     alertBox.classList.remove('hidden', 'bg-rose-500/20', 'text-rose-300', 'bg-emerald-500/20', 'text-emerald-300');
 
-    // 1. Cek Login Owner via UID Langsung
+    // Cek Login Owner via UID Langsung
     if (input === OWNER_UID || input === "NfOuYEiGp9Py2uSxuuqN3llGZUI2") {
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('userUID', OWNER_UID);
@@ -64,7 +63,7 @@ if (loginForm) {
       return;
     }
 
-    // 2. Cek Login via Realtime Database (Sesuai struktur database di Firebase Console Anda)
+    // Cek Login via Realtime Database (Mencocokkan email di node /users)
     try {
       const rtdbRef = firebase.database().ref('users');
       const snapshot = await rtdbRef.once('value');
@@ -81,12 +80,11 @@ if (loginForm) {
       }
 
       if (matchedUserKey) {
-        // Jika email ditemukan di Realtime Database
         localStorage.setItem('userRole', role);
         localStorage.setItem('userUID', matchedUserKey);
         window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
       } else {
-        // Fallback jika tidak ada di RTDB, coba cek Firebase Auth bawaan
+        // Fallback ke Firebase Auth bawaan
         await firebase.auth().signInWithEmailAndPassword(input, password);
         localStorage.setItem('userRole', role);
         window.location.href = role === 'admin' ? 'dashboard.html' : 'kasir.html';
@@ -99,14 +97,23 @@ if (loginForm) {
     }
   });
 }
+
+function logout() {
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userUID');
+  firebase.auth().signOut().then(() => {
+    window.location.href = 'index.html';
+  }).catch(() => {
+    window.location.href = 'index.html';
+  });
+}
+
 // 3. Dual-Sync Push Data (Firestore + LocalStorage + Google Sheets)
 async function pushTransaction(trx) {
-  // LocalStorage
   const local = getLocalData();
   local.push(trx);
   saveLocalData(local);
 
-  // Firebase
   if (db) {
     try {
       await db.collection('transactions').add(trx);
@@ -115,7 +122,6 @@ async function pushTransaction(trx) {
     }
   }
 
-  // Google Sheets Webhook
   if (GOOGLE_SHEETS_WEBHOOK_URL) {
     try {
       fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
@@ -157,7 +163,6 @@ if (kasirIncomeForm) {
 
 function updateKasirDisplay() {
   const data = getLocalData();
-  // Filter transaksi pemasukan pada shift berjalan
   const currentShiftIncome = data.filter(d => d.type === 'income');
   
   const cashTotal = currentShiftIncome
@@ -226,16 +231,14 @@ async function processClosingShift() {
 
   await pushTransaction(closingLog);
 
-  // Clear LocalStorage Shift
   localStorage.setItem('mang_emos_transactions', JSON.stringify([]));
-  alert('Closing shift berhasil! Log disimpen & hitungan kasir direset ke 0.');
+  alert('Closing shift berhasil! Log disimpan & hitungan kasir direset ke 0.');
   document.getElementById('physicalCashInput').value = '';
   document.getElementById('auditBox').classList.add('hidden');
   lastCalculatedVariance = null;
   updateKasirDisplay();
 }
 
-// Initialize Kasir view if active
 if (document.getElementById('systemCashDisplay')) {
   updateKasirDisplay();
 }
@@ -274,7 +277,13 @@ if (addKasirForm) {
     const password = document.getElementById('kasirPassword').value;
 
     try {
-      await firebase.auth().createUserWithEmailAndPassword(email, password);
+      // Menyimpan akun ke Firebase Authentication & Realtime Database
+      const userCred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+      await firebase.database().ref('users/' + userCred.user.uid).set({
+        email: email,
+        nama: email.split('@')[0],
+        role: 'kasir'
+      });
       alert(`Akun Kasir ${email} berhasil dibuat!`);
       addKasirForm.reset();
     } catch (err) {
@@ -283,17 +292,15 @@ if (addKasirForm) {
   });
 }
 
-// Render Data Dashboard
 function renderDashboard() {
   const filter = document.getElementById('filterPeriod') ? document.getElementById('filterPeriod').value : 'all';
   let data = getLocalData();
 
-  // Date Filter Logic
   const now = new Date();
   if (filter === 'daily') {
     data = data.filter(d => new Date(d.timestamp).toDateString() === now.toDateString());
   } else if (filter === 'weekly') {
-    const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     data = data.filter(d => new Date(d.timestamp) >= sevenDaysAgo);
   } else if (filter === 'monthly') {
     data = data.filter(d => new Date(d.timestamp).getMonth() === new Date().getMonth() && new Date(d.timestamp).getFullYear() === new Date().getFullYear());
@@ -370,11 +377,9 @@ function startVoiceInput() {
 
   recognition.onresult = async (event) => {
     const transcript = event.results[0][0].transcript.toLowerCase();
-    console.log("Suara terdeteksi:", transcript);
     micBtn.classList.remove('bg-rose-600', 'animate-pulse');
     micBtn.innerText = "🎙️ AI Suara";
 
-    // Contoh Perintah: "Beli Daging Ayam 50000" / "Pengeluaran Listrik 150000"
     const numberMatch = transcript.match(/\d+/g);
     if (numberMatch) {
       const amount = parseInt(numberMatch.join(''));
