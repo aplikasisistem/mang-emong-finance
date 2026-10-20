@@ -44,7 +44,7 @@ function loginUser() {
 
     // Otomatis sukses masuk sebagai Owner / Admin utama MANG EMOS FINANCE
     currentUser = {
-        uid: "NfOuYEiGp9Py2uSxuuqN3llGZUI2",
+        uid: "drbd2y4KnGNUF3qkd1M6Ya9QeXj2",",
         role: selectedRole,
         nama: "firman",
         email: "firman@ramenhouse.com"
