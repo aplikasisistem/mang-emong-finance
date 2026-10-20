@@ -1,11 +1,9 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyD2V799u779Q6xYvUVa3N2w_6R5Ql00Y-4",
   authDomain: "emong-finance.firebaseapp.com",
@@ -19,13 +17,8 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-// Inisialisasi Firebase & Firestore (Compat Version untuk integrasi mudah)
-let db = null;
-try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    console.log("Firebase & Firestore berhasil terhubung ke project: manajemen-keuangan-mang-emong!");
-} catch (e) {
-    console.error("Gagal menginisialisasi Firebase:", e);
-}
+const dbFirestore = getFirestore(app);
+const dbRealtime = getDatabase(app);
+const auth = getAuth(app);
 
+console.log("Firebase berhasil terhubung!");
