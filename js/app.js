@@ -1,11 +1,4 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Konfigurasi Firebase EMONG FINANCE
 const firebaseConfig = {
   apiKey: "AIzaSyD2V799u779Q6xYvUVa3N2w_6R5Ql00Y-4",
   authDomain: "emong-finance.firebaseapp.com",
@@ -16,10 +9,7 @@ const firebaseConfig = {
   measurementId: "G-DC7NVV0HM1"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-// Inisialisasi Firebase Realtime DB & Firestore (Compat)[cite: 1]
+// Inisialisasi Firebase Realtime DB & Firestore (Compat)
 let dbRealtime = null;
 let dbFirestore = null;
 let auth = null;
@@ -29,7 +19,7 @@ try {
     dbRealtime = firebase.database();
     dbFirestore = firebase.firestore();
     auth = firebase.auth();
-    console.log("Firebase terhubung ke project: manajemen-keuangan-mang-emong!");
+    console.log("Firebase terhubung ke project: emong-finance!");
 } catch (e) {
     console.error("Gagal menginisialisasi Firebase:", e);
 }
